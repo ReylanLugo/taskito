@@ -3,6 +3,7 @@ import logging
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
+from sqlalchemy import text
 from app.database import engine
 from app.loki_handler import setup_logging
 
@@ -25,7 +26,7 @@ async def health_check():
     # Verificar conexión a base de datos reutilizando engine
     try:
         with engine.connect() as conn:
-            conn.execute("SELECT 1")
+            conn.execute(text("SELECT 1"))
         health["database"] = True
         logging.info("Database connection is healthy.")
     except Exception as e:
