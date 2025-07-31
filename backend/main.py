@@ -6,12 +6,18 @@ from dotenv import load_dotenv
 from sqlalchemy import text
 from app.database import engine
 from app.loki_handler import setup_logging
+from app.routers import tasks
+from app.routers import auth
 
 # Load environment variables from .env file
 load_dotenv()
 setup_logging()
 
 app = FastAPI(title="Taskito API", description="A simple API for Taskito")
+
+# Include routers
+app.include_router(tasks.router)
+app.include_router(auth.router)
 
 @app.get("/", tags=["Root"])
 async def root():

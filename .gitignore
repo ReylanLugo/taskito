@@ -213,3 +213,6 @@ pyrightconfig.json
 
 # Docker
 logs
+
+# Pyrefly
+pyrefly.toml

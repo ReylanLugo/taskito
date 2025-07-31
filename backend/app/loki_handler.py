@@ -32,6 +32,9 @@ def setup_logging():
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
 
+    # Suppress passlib bcrypt warnings
+    logging.getLogger('passlib.handlers.bcrypt').setLevel(logging.ERROR)
+
     # Create a Loki handler
     loki_handler = LokiHandler("http://loki:3100/loki/api/v1/push", tags={"application": "taskito-backend"})
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
