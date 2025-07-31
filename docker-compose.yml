@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  api:
+    build: 
+      context: ./backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    env_file:
+      - .env.local
+    environment:
+      - POSTGRES_HOST=postgres
+      - REDIS_HOST=redis
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - taskito-network
+
+  postgres:
+    image: postgres:14
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    env_file:
+      - .env.local
+    ports:
+      - "5432:5432"
+    networks:
+      - taskito-network
+
+  redis:
+    image: redis:7
+    volumes:
+      - redis-data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - taskito-network
+
+volumes:
+  postgres-data:
+  redis-data:
+
+networks:
+  taskito-network:
