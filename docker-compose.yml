@@ -1,8 +1,8 @@
-version: '3.8'
+version: "3.8"
 
 services:
   api:
-    build: 
+    build:
       context: ./backend
     ports:
       - "8000:8000"
@@ -13,11 +13,14 @@ services:
     environment:
       - POSTGRES_HOST=postgres
       - REDIS_HOST=redis
+
     depends_on:
       - postgres
       - redis
+      - loki
     networks:
       - taskito-network
+      - loki
 
   postgres:
     image: postgres:14
@@ -39,9 +42,42 @@ services:
     networks:
       - taskito-network
 
+  loki:
+    image: grafana/loki:2.9.0
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - loki
+
+  promtail:
+    image: grafana/promtail:2.9.0
+    volumes:
+      - ./monitoring/promtail-config.yml:/etc/promtail/config.yml
+      - /var/lib/docker/containers:/var/lib/docker/containers
+    command: -config.file=/etc/promtail/config.yml
+    networks:
+      - loki
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./monitoring/grafana/provisioning/:/etc/grafana/provisioning/
+      - ./monitoring/grafana/dashboards/:/var/lib/grafana/dashboards/
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    networks:
+      - loki
+
 volumes:
   postgres-data:
   redis-data:
 
 networks:
   taskito-network:
+    driver: bridge
+  loki:
+    driver: bridge
