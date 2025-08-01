@@ -45,7 +45,7 @@ def read_tasks(
     search: Optional[str] = Query(None, description="Search in title and description"),
     order_by: str = Query(
         "created_at", 
-        regex="^(created_at|updated_at|due_date|priority|title)$",
+        pattern="^(created_at|updated_at|due_date|priority|title)$",
         description="Field to order by"
     ),
     order_desc: bool = Query(True, description="Order in descending order"),

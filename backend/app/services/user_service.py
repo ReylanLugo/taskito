@@ -43,6 +43,8 @@ class UserService:
             if not user:
                 logging.error(f"User not found (id={user_id})")
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        except HTTPException:
+            raise
         except Exception as e:
             logging.error(f"Error retrieving user by ID: {e}")
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
@@ -63,7 +65,7 @@ class UserService:
             user: Optional[User] = self.db.query(User).filter(User.username == username.lower()).first()
             if not user:
                 logging.error(f"User not found (username={username})")
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+                return None
         except Exception as e:
             logging.error(f"Error retrieving user by username: {e}")
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
@@ -84,7 +86,7 @@ class UserService:
             user: Optional[User] = self.db.query(User).filter(User.email == email.lower()).first()
             if not user:
                 logging.error(f"User not found (email={email})")
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+                return None
         except Exception as e:
             logging.error(f"Error retrieving user by email: {e}")
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
@@ -117,6 +119,8 @@ class UserService:
 
             logging.info(f"User created (id={db_user.id}, username={db_user.username})")
             return db_user
+        except HTTPException:
+            raise
         except Exception as e:
             logging.error(f"Error creating user: {e}")
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
@@ -205,6 +209,8 @@ class UserService:
         
             logging.info(f"User deactivated (id={user_id}, username={db_user.username})")
             return True
+        except HTTPException:
+            raise
         except Exception as e:
             logging.error(f"Error deactivating user {user_id}: {e}")
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
@@ -229,16 +235,18 @@ class UserService:
         
             logging.info(f"User activated (id={user_id}, username={db_user.username})")
             return True
+        except HTTPException:
+            raise
         except Exception as e:
             logging.error(f"Error activating user {user_id}: {e}")
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
     def authenticate_user(self, username: str, password: str) -> Optional[User]:
         """
-        Authenticate a user by username/email and password.
+        Authenticate a user by username and password.
         
         Args:
-            username: Username or email address
+            username: Username
             password: Plain text password
             
         Returns:

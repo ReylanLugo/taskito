@@ -1,19 +1,21 @@
-from pydantic import BaseModel, Field, validator
-from typing import Optional, List
+from pydantic import ConfigDict, BaseModel, Field, field_validator
+from typing import Optional, List, ClassVar
 from datetime import datetime
 from ..models.task import TaskPriority
 
 
 class TaskBase(BaseModel):
     """Base schema for task data"""
+    model_config = ConfigDict(from_attributes=True, extra='ignore')
+    
     title: str = Field(..., min_length=1, max_length=200, description="Task title")
     description: Optional[str] = Field(None, max_length=1000, description="Task description")
     due_date: Optional[datetime] = Field(None, description="Task due date")
     priority: TaskPriority = Field(TaskPriority.MEDIUM, description="Task priority level")
     assigned_to: Optional[int] = Field(None, description="ID of the user assigned to this task")
 
-    @validator('title')
-    def validate_title(cls, v):
+    @field_validator('title')
+    def validate_title(cls, v: str) -> str:
         if not v or not v.strip():
             raise ValueError('Title cannot be empty')
         return v.strip()
@@ -33,19 +35,19 @@ class TaskUpdate(BaseModel):
     priority: Optional[TaskPriority] = Field(None, description="Task priority level")
     assigned_to: Optional[int] = Field(None, description="ID of the user assigned to this task")
 
-    @validator('title')
-    def validate_title(cls, v):
-        if v is not None and (not v or not v.strip()):
+    @field_validator('title')
+    def validate_title(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and not v.strip():
             raise ValueError('Title cannot be empty')
-        return v.strip() if v else v
+        return v.strip() if v is not None else v
 
 
 class CommentBase(BaseModel):
     """Base schema for comment data"""
     content: str = Field(..., min_length=1, max_length=500, description="Comment content")
 
-    @validator('content')
-    def validate_content(cls, v):
+    @field_validator('content')
+    def validate_content(cls, v: str) -> str:
         if not v or not v.strip():
             raise ValueError('Comment content cannot be empty')
         return v.strip()
@@ -63,9 +65,8 @@ class Comment(CommentBase):
     author_id: int
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
+    
+    model_config = ConfigDict(from_attributes=True, extra='ignore')
 
 
 class Task(TaskBase):
@@ -76,9 +77,8 @@ class Task(TaskBase):
     created_at: datetime
     updated_at: datetime
     comments: List[Comment] = []
-
-    class Config:
-        from_attributes = True
+    
+    model_config = ConfigDict(from_attributes=True, extra='ignore')
 
 
 class TaskStatistics(BaseModel):

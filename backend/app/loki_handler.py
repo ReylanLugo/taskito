@@ -1,6 +1,5 @@
 import logging
 import requests
-from logging.handlers import RotatingFileHandler
 
 class LokiHandler(logging.Handler):
     def __init__(self, url, tags=None):
@@ -43,12 +42,10 @@ def setup_logging():
     # Add the handler to the root logger
     logger.addHandler(loki_handler)
 
-    # Optional: Add a file handler for local logging as a fallback
-    file_handler = RotatingFileHandler('app.log', maxBytes=10240, backupCount=10)
+    file_handler = logging.FileHandler('app.log', mode='a')
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
 
-    # Optional: Add a stream handler to see logs in the console
     stream_handler = logging.StreamHandler()
     stream_handler.setFormatter(formatter)
     logger.addHandler(stream_handler)

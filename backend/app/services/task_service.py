@@ -4,7 +4,7 @@ from datetime import datetime
 from fastapi import status
 from fastapi.exceptions import HTTPException
 from sqlalchemy.orm import Query, Session
-from sqlalchemy import and_, or_, desc, asc, func
+from sqlalchemy import and_, or_, desc, asc
 
 from ..models.task import Task, Comment, TaskPriority
 from ..models.user import User
@@ -46,6 +46,8 @@ class TaskService:
                 logging.info(f"Task not found (id={task_id})")
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
             return task
+        except HTTPException:
+            raise
         except Exception as e:
             logging.error(f"Error retrieving task {task_id}: {e}")
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
@@ -162,6 +164,9 @@ class TaskService:
             
             logging.info(f"Task updated (id={task_id}, by user={user_id})")
             return db_task
+        except HTTPException:
+            # Let FastAPI handle HTTPExceptions (like 404)
+            raise
         except Exception as e:
             logging.error(f"Error updating task {task_id}: {e}")
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
@@ -187,6 +192,9 @@ class TaskService:
             
             logging.info(f"Task deleted (id={task_id}) by user {user_id}")
             return True
+        except HTTPException:
+            # Let FastAPI handle HTTPExceptions (like 404)
+            raise
         except Exception as e:
             logging.error(f"Error deleting task {task_id}: {e}")
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))

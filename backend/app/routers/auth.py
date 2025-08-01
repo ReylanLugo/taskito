@@ -55,9 +55,9 @@ def login_for_access_token(
     user_service: UserService = Depends(get_user_service)
 ):
     """
-    Login with username/email and password to get access token.
+    Login with username and password to get access token.
     
-    - **username**: Username or email address
+    - **username**: Username
     - **password**: User password
     """
     user = user_service.authenticate_user(form_data.username, form_data.password)
@@ -91,7 +91,7 @@ def login_with_json(
     """
     Alternative login endpoint that accepts JSON instead of form data.
     
-    - **username**: Username or email address
+    - **username**: Username
     - **password**: User password
     """
     user = user_service.authenticate_user(login_data.username, login_data.password)
@@ -224,6 +224,8 @@ def deactivate_user(
             )
         
         return {"message": "User deactivated successfully"}
+    except HTTPException:
+        raise
     except Exception as e:
         logging.error(f"Error deactivating user {user_id}: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
@@ -255,6 +257,8 @@ def activate_user(
             )
         
         return {"message": "User activated successfully"}
+    except HTTPException:
+        raise
     except Exception as e:
         logging.error(f"Error activating user {user_id}: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
