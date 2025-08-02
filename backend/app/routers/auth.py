@@ -1,5 +1,5 @@
 from datetime import timedelta
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
@@ -14,13 +14,16 @@ from app.dependencies.auth import (
     get_user_service
 )
 from app.config import settings
+from app.middleware import limiter
 import logging
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
 
 @router.post("/register", response_model=User, status_code=status.HTTP_201_CREATED)
-def register(
+@limiter.limit(f"{settings.rate_limit_auth_requests}/{settings.rate_limit_auth_window}")
+async def register(
+    request: Request,
     user: UserCreate,
     user_service: UserService = Depends(get_user_service)
 ):
@@ -50,7 +53,9 @@ def register(
 
 
 @router.post("/token", response_model=Token)
-def login_for_access_token(
+@limiter.limit(f"{settings.rate_limit_auth_requests}/{settings.rate_limit_auth_window}")
+async def login_for_access_token(
+    request: Request,
     form_data: OAuth2PasswordRequestForm = Depends(),
     user_service: UserService = Depends(get_user_service)
 ):
@@ -84,7 +89,9 @@ def login_for_access_token(
 
 
 @router.post("/login", response_model=Token)
-def login_with_json(
+@limiter.limit(f"{settings.rate_limit_auth_requests}/{settings.rate_limit_auth_window}")
+async def login_with_json(
+    request: Request,
     login_data: LoginRequest,
     user_service: UserService = Depends(get_user_service)
 ):
@@ -117,7 +124,8 @@ def login_with_json(
 
 
 @router.get("/me", response_model=User)
-def read_users_me(current_user: User = Depends(get_current_active_user)) -> User:
+@limiter.limit(f"{settings.rate_limit_auth_requests}/{settings.rate_limit_auth_window}")
+async def read_users_me(request: Request, current_user: User = Depends(get_current_active_user)) -> User:
     """
     Get current user information.
     
@@ -127,11 +135,13 @@ def read_users_me(current_user: User = Depends(get_current_active_user)) -> User
 
 
 @router.put("/me", response_model=User)
-def update_user_profile(
+@limiter.limit(f"{settings.rate_limit_auth_requests}/{settings.rate_limit_auth_window}")
+async def update_user_profile(
+    request: Request,
     user_update: UserUpdate,
     current_user: User = Depends(get_current_active_user),
     user_service: UserService = Depends(get_user_service)
-) -> User:
+):
     """
     Update current user's profile information.
     
@@ -140,9 +150,9 @@ def update_user_profile(
     - **role**: New role (optional, admin only)
     - **is_active**: Account status (optional, admin only)
     """
-    # Only admins can change role and is_active
-    if current_user.role.value != "admin":
-        if user_update.role is not None or user_update.is_active is not None:
+    # Only admins can modify role or active status
+    if (user_update.role is not None or user_update.is_active is not None):
+        if current_user.role.value != "admin":
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Not enough permissions to modify role or active status"
@@ -177,7 +187,9 @@ def update_user_profile(
 
 
 @router.put("/me/password")
-def change_password(
+@limiter.limit(f"{settings.rate_limit_auth_requests}/{settings.rate_limit_auth_window}")
+async def change_password(
+    request: Request,
     password_update: UserPasswordUpdate,
     current_user: User = Depends(get_current_active_user),
     user_service: UserService = Depends(get_user_service)
@@ -199,7 +211,9 @@ def change_password(
 
 
 @router.put("/users/{user_id}/deactivate")
-def deactivate_user(
+@limiter.limit(f"{settings.rate_limit_auth_requests}/{settings.rate_limit_auth_window}")
+async def deactivate_user(
+    request: Request,
     user_id: int,
     current_user: User = Depends(require_admin),
     user_service: UserService = Depends(get_user_service)
@@ -232,7 +246,9 @@ def deactivate_user(
 
 
 @router.put("/users/{user_id}/activate")
-def activate_user(
+@limiter.limit(f"{settings.rate_limit_auth_requests}/{settings.rate_limit_auth_window}")
+async def activate_user(
+    request: Request,
     user_id: int,
     current_user: User = Depends(require_admin),
     user_service: UserService = Depends(get_user_service)

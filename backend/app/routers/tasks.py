@@ -1,5 +1,5 @@
 import logging
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from sqlalchemy.orm import Session
 from typing import Optional
 from datetime import datetime
@@ -14,7 +14,8 @@ from ..models.task import TaskPriority
 from ..schemas.user import User
 from ..services.task_service import TaskService
 from ..dependencies.auth import get_current_active_user
-
+from ..middleware import limiter
+from app.config import settings
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
@@ -33,7 +34,9 @@ def get_task_service(db: Session = Depends(get_db)) -> TaskService:
 
 
 @router.get("/", response_model=TaskResponse)
-def read_tasks(
+@limiter.limit(f"{settings.rate_limit_requests}/{settings.rate_limit_window}")
+async def read_tasks(
+    request: Request,
     page: int = Query(1, ge=1, description="Page number"),
     size: int = Query(10, ge=1, le=100, description="Number of tasks per page"),
     completed: Optional[bool] = Query(None, description="Filter by completion status"),
@@ -79,7 +82,7 @@ def read_tasks(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid due_before date format. Use ISO format."
-    )
+        )
 
     try:
         if due_after:
@@ -91,7 +94,7 @@ def read_tasks(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid due_after date format. Use ISO format."
-    )
+        )
     
     # Create filter object
     filters = TaskFilter(
@@ -125,7 +128,9 @@ def read_tasks(
 
 
 @router.get("/statistics", response_model=TaskStatistics)
-def read_task_statistics(
+@limiter.limit(f"{settings.rate_limit_requests}/{settings.rate_limit_window}")
+async def read_task_statistics(
+    request: Request,
     task_service: TaskService = Depends(get_task_service),
     current_user: User = Depends(get_current_active_user)
 ):
@@ -139,12 +144,15 @@ def read_task_statistics(
     - Number of overdue tasks
     - Tasks by priority level
     """
-    logging.info("/tasks/statistics GET")
-    return task_service.get_task_statistics()
+    statistics = task_service.get_task_statistics()
+    logging.info(f"/tasks/statistics GET Retrieved task statistics")
+    return statistics
 
 
 @router.post("/", response_model=Task, status_code=status.HTTP_201_CREATED)
-def create_new_task(
+@limiter.limit(f"{settings.rate_limit_requests}/{settings.rate_limit_window}")
+async def create_new_task(
+    request: Request,
     task: TaskCreate,
     task_service: TaskService = Depends(get_task_service),
     current_user: User = Depends(get_current_active_user)
@@ -155,23 +163,25 @@ def create_new_task(
     - **title**: Task title (required, 1-200 characters)
     - **description**: Task description (optional, max 1000 characters)
     - **due_date**: Task due date (optional, ISO format)
-    - **priority**: Task priority level (alta, media, baja)
+    - **priority**: Task priority (alta, media, baja)
     - **assigned_to**: ID of the user assigned to this task (optional)
     """
     try:
-        task = task_service.create_task(task_data=task, user_id=current_user.id)
-        logging.info(f"/tasks POST Task created successfully (id={task.id})")
-        return task
-    except ValueError as e:
+        db_task = task_service.create_task(task_data=task, user_id=current_user.id)
+        logging.info(f"/tasks POST Task created successfully with id {db_task.id}")
+        return db_task
+    except Exception as e:
         logging.error(f"/tasks POST Error creating task: {e}")
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create task"
         )
 
 
 @router.get("/{task_id}", response_model=Task)
-def read_task(
+@limiter.limit(f"{settings.rate_limit_requests}/{settings.rate_limit_window}")
+async def read_task(
+    request: Request,
     task_id: int,
     task_service: TaskService = Depends(get_task_service),
     current_user: User = Depends(get_current_active_user)
@@ -188,12 +198,14 @@ def read_task(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Task not found"
         )
-    logging.info(f"/tasks/{task_id} GET Found")
+    logging.info(f"/tasks/{task_id} GET Task retrieved successfully")
     return db_task
 
 
 @router.put("/{task_id}", response_model=Task)
-def update_existing_task(
+@limiter.limit(f"{settings.rate_limit_requests}/{settings.rate_limit_window}")
+async def update_existing_task(
+    request: Request,
     task_id: int,
     task_update: TaskUpdate,
     task_service: TaskService = Depends(get_task_service),
@@ -207,10 +219,10 @@ def update_existing_task(
     - **task_id**: The ID of the task to update
     - **title**: New task title (optional, 1-200 characters)
     - **description**: New task description (optional, max 1000 characters)
-    - **completed**: Task completion status (optional)
     - **due_date**: New task due date (optional, ISO format)
-    - **priority**: New task priority level (optional)
-    - **assigned_to**: ID of the user to assign this task to (optional)
+    - **priority**: New task priority (optional, alta, media, baja)
+    - **completed**: Task completion status (optional)
+    - **assigned_to**: ID of the user assigned to this task (optional)
     """
     db_task: Task | None = task_service.get_task_by_id(task_id)
     if db_task is None:
@@ -238,7 +250,9 @@ def update_existing_task(
 
 
 @router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_existing_task(
+@limiter.limit(f"{settings.rate_limit_requests}/{settings.rate_limit_window}")
+async def delete_existing_task(
+    request: Request,
     task_id: int,
     task_service: TaskService = Depends(get_task_service),
     current_user: User = Depends(get_current_active_user)
@@ -277,7 +291,9 @@ def delete_existing_task(
 
 
 @router.post("/{task_id}/comments", response_model=Comment, status_code=status.HTTP_201_CREATED)
-def add_comment_to_task(
+@limiter.limit(f"{settings.rate_limit_requests}/{settings.rate_limit_window}")
+async def add_comment_to_task(
+    request: Request,
     task_id: int,
     comment: CommentCreate,
     task_service: TaskService = Depends(get_task_service),

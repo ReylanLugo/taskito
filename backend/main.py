@@ -1,14 +1,18 @@
 import os
 import logging
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 from sqlalchemy import text
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 from app.database import engine
 from app.loki_handler import setup_logging
 from app.routers import tasks
 from app.routers import auth
 from app.schemas.main import HealthCheckResponse
+from app.middleware import limiter
+from app.config import settings
 
 # Load environment variables from .env file
 load_dotenv()
@@ -16,18 +20,24 @@ setup_logging()
 
 app = FastAPI(title="Taskito API", description="A simple API for Taskito")
 
+# Add rate limiting state and error handler
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 # Include routers
 app.include_router(tasks.router)
 app.include_router(auth.router)
 
 @app.get("/", tags=["Root"])
-async def root():
+@limiter.limit(f"{settings.rate_limit_requests}/{settings.rate_limit_window}")
+async def root(request: Request):
     return JSONResponse(content={
         "message": "Hello World",
     })
 
 @app.get("/health", response_model=HealthCheckResponse)
-async def health_check():
+@limiter.limit(f"{settings.rate_limit_requests}/{settings.rate_limit_window}")
+async def health_check(request: Request):
     """Check the health of the application and its dependencies."""
     logging.info("Health check endpoint was called.")
     

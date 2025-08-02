@@ -1,8 +1,13 @@
 """
 Pytest configuration and shared fixtures for testing.
 """
-import pytest
 import os
+
+# Set testing environment variable to disable rate limiting in normal tests
+# This must be done BEFORE importing the main app object
+os.environ["TESTING"] = "true"
+
+import pytest
 from typing import Generator, Dict, Any
 from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
@@ -16,7 +21,6 @@ from app.database import get_db, Base, SessionLocal
 from app.models.user import User as UserModel
 from app.schemas.user import UserCreate
 from app.services.user_service import UserService
-
 
 # Test database URL
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"

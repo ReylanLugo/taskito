@@ -26,6 +26,13 @@ class Settings(BaseSettings):
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
 
+    # Rate limiting settings
+    rate_limit_enabled: bool = True
+    rate_limit_requests: int = 3
+    rate_limit_window: str = "minutes"
+    rate_limit_auth_requests: int = 3
+    rate_limit_auth_window: str = "minutes"
+
     model_config = SettingsConfigDict(
         env_file=".env.local", env_file_encoding="utf-8", case_sensitive=False
     )
