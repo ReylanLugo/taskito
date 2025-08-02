@@ -28,7 +28,7 @@ class UserService:
         self.db = db
         self.pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-    def get_user_by_id(self, user_id: int) -> Optional[User]:
+    def get_user_by_id(self, user_id: int):
         """
         Retrieve a user by their ID.
         
@@ -136,12 +136,16 @@ class UserService:
         Returns:
             Updated User object if found, None otherwise
         """
+        
         try:
             db_user = self.get_user_by_id(user_id)
-            if not db_user:
+        except HTTPException as e:
+            if e.status_code == 404:
                 return None
+            raise
         
-            # Update only provided fields
+
+        try:
             update_data = user_update.model_dump(exclude_unset=True)
             for field, value in update_data.items():
                 if field == 'username' and value:
@@ -149,17 +153,16 @@ class UserService:
                 elif field == 'email' and value:
                     value = value.lower()
                 setattr(db_user, field, value)
-        
+            
             self.db.commit()
             self.db.refresh(db_user)
-        
-            logging.info(f"User updated (id={user_id}, username={db_user.username})")
+            logging.info(f"User updated (id={user_id}, username={db_user.username}")
             return db_user
         except Exception as e:
             logging.error(f"Error updating user {user_id}: {e}")
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
-    def update_user_password(self, user_id: int, password_update: UserPasswordUpdate) -> bool:
+    def update_user_password(self, user_id: int, password_update: UserPasswordUpdate):
         """
         Update a user's password after verifying the current password.
         
@@ -171,9 +174,7 @@ class UserService:
             True if password was updated, False otherwise
         """
         try:
-            db_user: User | None = self.get_user_by_id(user_id)
-            if not db_user:
-                return False
+            db_user = self.get_user_by_id(user_id)
         
             # Verify current password
             if not self._verify_password(password_update.current_password, cast(str, db_user.hashed_password)):
@@ -189,7 +190,7 @@ class UserService:
             logging.error(f"Error updating user password {user_id}: {e}")
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
-    def deactivate_user(self, user_id: int) -> bool:
+    def deactivate_user(self, user_id: int):
         """
         Deactivate a user account.
         
@@ -197,12 +198,10 @@ class UserService:
             user_id: ID of the user to deactivate
             
         Returns:
-            True if user was deactivated, False if not found
+            True if user was deactivated
         """
         try:
             db_user = self.get_user_by_id(user_id)
-            if not db_user:
-                return False
         
             db_user.is_active = False
             self.db.commit()
@@ -215,7 +214,7 @@ class UserService:
             logging.error(f"Error deactivating user {user_id}: {e}")
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
-    def activate_user(self, user_id: int) -> bool:
+    def activate_user(self, user_id: int):
         """
         Activate a user account.
         
@@ -223,12 +222,10 @@ class UserService:
             user_id: ID of the user to activate
             
         Returns:
-            True if user was activated, False if not found
+            True if user was activated
         """
         try:
             db_user = self.get_user_by_id(user_id)
-            if not db_user:
-                return False
         
             db_user.is_active = True
             self.db.commit()

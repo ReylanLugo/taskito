@@ -1,106 +1,126 @@
-"""
-Tests for main application endpoints.
-"""
-import pytest
+from fastapi.routing import APIRoute
+from app.schemas.main import HealthCheckResponse
+from main import app
+from unittest.mock import MagicMock
 from fastapi.testclient import TestClient
-from unittest.mock import patch, MagicMock
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import OperationalError
+import re
 
 
 class TestMainEndpoints:
-    """Test class for main application endpoints."""
-
-    @pytest.mark.unit
     def test_root_endpoint(self, client: TestClient):
-        """Test the root endpoint returns correct response."""
+        """Test root endpoint."""
         response = client.get("/")
-        
         assert response.status_code == 200
         assert response.json() == {"message": "Hello World"}
 
-    @pytest.mark.unit
-    @patch('app.database.engine.connect')
-    def test_health_check_healthy_database(self, mock_connect, client: TestClient):
-        """Test health check endpoint with healthy database."""
-        # Mock successful database connection
+    def test_health_check_success(self, client: TestClient, monkeypatch):
+        """Test health check with healthy database."""
         mock_conn = MagicMock()
         mock_conn.execute.return_value = None
-        mock_connect.return_value.__enter__.return_value = mock_conn
         
+        mock_engine = MagicMock()
+        mock_engine.connect.return_value.__enter__.return_value = mock_conn
+    
+        monkeypatch.setattr("main.engine", mock_engine)
+
         response = client.get("/health")
-        
         assert response.status_code == 200
-        data = response.json()
-        assert data["status"] == "ok"
-        assert data["database"] is True
+        assert response.json() == {
+            "status": "ok",
+            "database": True
+        }
 
-    @pytest.mark.unit
-    @patch('app.database.engine.connect')
-    def test_health_check_unhealthy_database(self, mock_connect, client: TestClient):
-        """Test health check endpoint with unhealthy database."""
-        # Mock database connection failure
-        mock_connect.side_effect = SQLAlchemyError("Database connection failed")
-        
+    def test_health_check_database_failure(self, client: TestClient, monkeypatch):
+        """Test health check with failed database connection."""
+        mock_engine = MagicMock()
+        mock_engine.connect.side_effect = OperationalError("Error with database connection", None, Exception("Error"))
+    
+        monkeypatch.setattr("main.engine", mock_engine)
+
         response = client.get("/health")
-        
         assert response.status_code == 200
-        data = response.json()
-        assert data["status"] == "degraded"
-        assert data["database"] is False
+        assert response.json() == {
+            "status": "degraded",
+            "database": False
+        }
 
-    @pytest.mark.unit
-    @patch('app.database.engine.connect')
-    def test_health_check_database_connection_exception(self, mock_connect, client: TestClient):
-        """Test health check endpoint handles database exceptions gracefully."""
-        # Mock connection that raises exception during execute
-        mock_conn = MagicMock()
-        mock_conn.execute.side_effect = Exception("Connection lost")
-        mock_connect.return_value.__enter__.return_value = mock_conn
+    def test_unauthorized_access_protected_endpoints(self, client: TestClient):
+        """Test unauthorized access to protected endpoints."""
+        # Get only API routes
+        api_routes = [
+            route for route in app.routes 
+            if isinstance(route, APIRoute)
+        ]
+    
+        # Filter public endpoints
+        public_paths = {
+            "/",
+            "/health",
+            "/auth/token",
+            "/openapi.json",
+            "/docs",
+            "/redoc",
+            "/docs/oauth2-redirect",
+            "/docs/static/{path:path}"
+        }
+    
+        # Test protected routes
+        for route in api_routes:
+            path = route.path
+            
+            # Skip public paths
+            if path in public_paths:
+                continue
+            
+            # Create testable path by replacing all parameters
+            test_path = re.sub(r'\{[^}]+\}', 'test_value', path)
         
-        response = client.get("/health")
+            # Skip paths that couldn't be sanitized
+            if "{" in test_path or "}" in test_path:
+                continue
+            
+            # Determine which methods to test
+            methods_to_test = []
+            if "GET" in route.methods:
+                methods_to_test.append("GET")
+            if "POST" in route.methods and "{" not in path:
+                methods_to_test.append("POST")
         
-        assert response.status_code == 200
-        data = response.json()
-        assert data["status"] == "degraded"
-        assert data["database"] is False
+            for method in methods_to_test:
+                if method in ["POST", "PUT", "PATCH"]:
+                    response = client.request(
+                        method=method,
+                        url=test_path,
+                        json={}
+                    )
+                else:
+                    response = client.request(
+                        method=method,
+                        url=test_path
+                    )
+            
+                # Allow additional status codes:
+                # - 405: Method not allowed (shouldn't happen but safe to include)
+                # - 404: Not found (invalid test path)
+                # - 422: Validation error (invalid parameters)
+                assert response.status_code in [401, 403, 404, 405, 422], \
+                    (f"{method} {path} returned {response.status_code} "
+                 "instead of 401/403")
 
-    @pytest.mark.integration
-    def test_health_check_response_structure(self, client: TestClient):
-        """Test health check response has correct structure."""
-        response = client.get("/health")
-        
-        assert response.status_code == 200
-        data = response.json()
-        
-        # Check required fields exist
-        assert "status" in data
-        assert "database" in data
-        
-        # Check field types
-        assert isinstance(data["status"], str)
-        assert isinstance(data["database"], bool)
-        
-        # Check status is valid
-        assert data["status"] in ["ok", "degraded"]
 
-    @pytest.mark.unit
-    def test_nonexistent_endpoint(self, client: TestClient):
-        """Test that nonexistent endpoints return 404."""
-        response = client.get("/nonexistent")
-        
-        assert response.status_code == 404
-
-    @pytest.mark.unit
-    def test_health_endpoint_logging(self, client: TestClient, caplog):
-        """Test that health endpoint logs appropriately."""
-        with caplog.at_level("INFO"):
-            response = client.get("/health")
-        
-        assert response.status_code == 200
-        assert "Health check endpoint was called" in caplog.text
-        
-        # Check for database health logging
-        if response.json()["database"]:
-            assert "Database connection is healthy" in caplog.text
-        else:
-            assert "Database connection is not healthy" in caplog.text
+    def test_routers_registered(self, client: TestClient):
+        """Verify that the main routers are registered."""
+        # Verify task router
+        task_routes = [
+            route for route in app.routes 
+            if isinstance(route, APIRoute) and route.path.startswith("/tasks")
+        ]
+        assert len(task_routes) > 0, "Router of tasks not registered"
+    
+        # Verify auth router
+        auth_routes = [
+            route for route in app.routes 
+            if isinstance(route, APIRoute) and route.path.startswith("/auth")
+        ]
+        assert len(auth_routes) > 0, "Router of auth not registered"

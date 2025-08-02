@@ -4,14 +4,15 @@ Pytest configuration and shared fixtures for testing.
 import pytest
 import os
 from typing import Generator, Dict, Any
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.pool import StaticPool
 
+from app.services.task_service import TaskService
 from main import app
-from app.database import get_db, Base
+from app.database import get_db, Base, SessionLocal
 from app.models.user import User as UserModel
 from app.schemas.user import UserCreate
 from app.services.user_service import UserService
@@ -77,6 +78,11 @@ def user_service(db_session: Session) -> UserService:
     """Create UserService instance for testing."""
     return UserService(db_session)
 
+
+@pytest.fixture
+def task_service(db_session: Session) -> TaskService:
+    """Create TaskService instance for testing."""
+    return TaskService(db_session)
 
 @pytest.fixture
 def test_user_data() -> Dict[str, Any]:
@@ -170,7 +176,7 @@ def created_task(client: TestClient, auth_headers: Dict[str, str], test_task_dat
     return response.json()
 
 
-# Cleanup after tests
+# Cleanup and mocking fixtures
 @pytest.fixture(autouse=True)
 def cleanup_test_db():
     """Clean up test database after each test."""
@@ -198,3 +204,22 @@ def mock_loki_requests():
         mock_post.return_value.status_code = 200
         mock_post.return_value.json.return_value = {"status": "success"}
         yield
+
+
+@pytest.fixture
+def mock_db_session(monkeypatch) -> Generator[MagicMock, None, None]:
+    """Mock database session for testing database operations.
+
+    This fixture patches `SessionLocal` to return a mock session, allowing
+    tests to run without a real database connection. It yields the mock session
+    object for assertions in database-related tests.
+    
+    Used primarily in test_database.py for testing database connection handling.
+    """
+    mock_session_local = MagicMock(spec=SessionLocal)
+    mock_session = MagicMock(spec=Session)
+    mock_session_local.return_value = mock_session
+
+    monkeypatch.setattr('app.database.SessionLocal', mock_session_local)
+
+    yield mock_session

@@ -4,10 +4,10 @@ Tests for authentication endpoints.
 import pytest
 from fastapi.testclient import TestClient
 from typing import Dict, Any
-from unittest.mock import patch
 
 from app.models.user import User as UserModel
 from app.services.user_service import UserService
+from app.schemas.user import UserCreate
 
 
 class TestAuthRegistration:
@@ -202,6 +202,48 @@ class TestAuthProfile:
         assert data["username"] == created_user.username
         assert data["email"] == created_user.email
         assert "password" not in data
+
+    @pytest.mark.auth
+    def test_get_current_user_not_found(
+        self, 
+        client: TestClient, 
+        user_service: UserService,
+    ):
+        """Test getting current user when user doesn't exist in database."""
+        token = user_service.create_access_token({"sub": "non_existent_user"})
+    
+        response = client.get(
+            "/auth/me", 
+            headers={"Authorization": f"Bearer {token}"}
+        )
+    
+        assert response.status_code == 401
+        assert "Could not validate credentials" in response.json()["detail"]
+
+    @pytest.mark.auth
+    def test_get_current_inactive_user(
+        self, 
+        client: TestClient, 
+        user_service: UserService,
+        test_user_data: Dict[str, Any]
+    ):
+        """Test getting current user when user is inactive."""
+        user_create = UserCreate(**test_user_data)
+        user = user_service.create_user(user_create)
+        user_id = getattr(user, 'id', None)
+        if not isinstance(user_id, int) or user_id <= 0:
+            return pytest.fail(f"Invalid user ID: {user_id}")
+        user_service.deactivate_user(user_id)
+    
+        token = user_service.create_access_token({"sub": test_user_data["username"]})
+    
+        response = client.get(
+            "/auth/me", 
+            headers={"Authorization": f"Bearer {token}"}
+        )
+    
+        assert response.status_code == 400
+        assert "Inactive user" in response.json()["detail"]
 
     @pytest.mark.auth
     def test_get_current_user_unauthorized(self, client: TestClient):
