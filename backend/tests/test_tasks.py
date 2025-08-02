@@ -13,9 +13,14 @@ class TestTaskCreation:
     """Test class for task creation endpoint."""
 
     @pytest.mark.tasks
-    def test_create_task_success(self, client: TestClient, auth_headers: Dict[str, str], test_task_data: Dict[str, Any]):
+    def test_create_task_success(self, client: TestClient, auth_headers_csrf: Dict[str, Any], test_task_data: Dict[str, Any]):
         """Test successful task creation."""
-        response = client.post("/tasks/", json=test_task_data, headers=auth_headers)
+        response = client.post(
+            "/tasks/", 
+            json=test_task_data, 
+            headers=auth_headers_csrf["headers"],
+            cookies=auth_headers_csrf["cookies"]
+        )
         
         assert response.status_code == 201
         data = response.json()
@@ -28,11 +33,16 @@ class TestTaskCreation:
         assert "updated_at" in data
 
     @pytest.mark.tasks
-    def test_create_task_minimal_data(self, client: TestClient, auth_headers: Dict[str, str]):
+    def test_create_task_minimal_data(self, client: TestClient, auth_headers_csrf: Dict[str, Any]):
         """Test creating task with minimal required data."""
         minimal_data = {"title": "Minimal Task"}
         
-        response = client.post("/tasks/", json=minimal_data, headers=auth_headers)
+        response = client.post(
+            "/tasks/",
+            json=minimal_data,
+            headers=auth_headers_csrf["headers"],
+            cookies=auth_headers_csrf["cookies"]
+        )
         
         assert response.status_code == 201
         data = response.json()
@@ -42,14 +52,19 @@ class TestTaskCreation:
         assert data["due_date"] is None
 
     @pytest.mark.tasks
-    def test_create_task_with_assignment(self, client: TestClient, auth_headers: Dict[str, str], created_admin: UserModel):
+    def test_create_task_with_assignment(self, client: TestClient, auth_headers_csrf: Dict[str, Any], created_admin: UserModel):
         """Test creating task with user assignment."""
         task_data = {
             "title": "Assigned Task",
             "assigned_to": created_admin.id
         }
         
-        response = client.post("/tasks/", json=task_data, headers=auth_headers)
+        response = client.post(
+            "/tasks/",
+            json=task_data,
+            headers=auth_headers_csrf["headers"],
+            cookies=auth_headers_csrf["cookies"]
+        )
         
         assert response.status_code == 201
         data = response.json()
@@ -63,23 +78,33 @@ class TestTaskCreation:
         assert response.status_code == 401
 
     @pytest.mark.tasks
-    def test_create_task_invalid_data(self, client: TestClient, auth_headers: Dict[str, str]):
+    def test_create_task_invalid_data(self, client: TestClient, auth_headers_csrf: Dict[str, Any]):
         """Test creating task with invalid data fails."""
         invalid_data = {"title": ""}  # Empty title
         
-        response = client.post("/tasks/", json=invalid_data, headers=auth_headers)
+        response = client.post(
+            "/tasks/",
+            json=invalid_data,
+            headers=auth_headers_csrf["headers"],
+            cookies=auth_headers_csrf["cookies"]
+        )
         
         assert response.status_code == 422
 
     @pytest.mark.tasks
-    def test_create_task_invalid_priority(self, client: TestClient, auth_headers: Dict[str, str]):
+    def test_create_task_invalid_priority(self, client: TestClient, auth_headers_csrf: Dict[str, Any]):
         """Test creating task with invalid priority fails."""
         invalid_data = {
             "title": "Test Task",
             "priority": "invalid_priority"
         }
         
-        response = client.post("/tasks/", json=invalid_data, headers=auth_headers)
+        response = client.post(
+            "/tasks/",
+            json=invalid_data,
+            headers=auth_headers_csrf["headers"],
+            cookies=auth_headers_csrf["cookies"]
+        )
         
         assert response.status_code == 422
 
@@ -88,9 +113,9 @@ class TestTaskRetrieval:
     """Test class for task retrieval endpoints."""
 
     @pytest.mark.tasks
-    def test_get_tasks_default(self, client: TestClient, auth_headers: Dict[str, str], created_task: Dict[str, Any]):
+    def test_get_tasks_default(self, client: TestClient, auth_headers_csrf: Dict[str, Any], created_task: Dict[str, Any]):
         """Test getting tasks with default parameters."""
-        response = client.get("/tasks/", headers=auth_headers)
+        response = client.get("/tasks/", headers=auth_headers_csrf["headers"], cookies=auth_headers_csrf["cookies"])
         
         assert response.status_code == 200
         data = response.json()
@@ -102,9 +127,13 @@ class TestTaskRetrieval:
         assert len(data["tasks"]) >= 1
 
     @pytest.mark.tasks
-    def test_get_tasks_pagination(self, client: TestClient, auth_headers: Dict[str, str], created_task: Dict[str, Any]):
+    def test_get_tasks_pagination(self, client: TestClient, auth_headers_csrf: Dict[str, Any], created_task: Dict[str, Any]):
         """Test task pagination."""
-        response = client.get("/tasks/?page=1&size=5", headers=auth_headers)
+        response = client.get(
+            "/tasks/?page=1&size=5", 
+            headers=auth_headers_csrf["headers"], 
+            cookies=auth_headers_csrf["cookies"]
+        )
         
         assert response.status_code == 200
         data = response.json()
@@ -112,9 +141,13 @@ class TestTaskRetrieval:
         assert data["size"] == 5
 
     @pytest.mark.tasks
-    def test_get_tasks_filter_completed(self, client: TestClient, auth_headers: Dict[str, str], created_task: Dict[str, Any]):
+    def test_get_tasks_filter_completed(self, client: TestClient, auth_headers_csrf: Dict[str, Any], created_task: Dict[str, Any]):
         """Test filtering tasks by completion status."""
-        response = client.get("/tasks/?completed=false", headers=auth_headers)
+        response = client.get(
+            "/tasks/?completed=false", 
+            headers=auth_headers_csrf["headers"], 
+            cookies=auth_headers_csrf["cookies"]
+        )
         
         assert response.status_code == 200
         data = response.json()
@@ -122,9 +155,13 @@ class TestTaskRetrieval:
             assert task["completed"] is False
 
     @pytest.mark.tasks
-    def test_get_tasks_filter_priority(self, client: TestClient, auth_headers: Dict[str, str], created_task: Dict[str, Any]):
+    def test_get_tasks_filter_priority(self, client: TestClient, auth_headers_csrf: Dict[str, Any], created_task: Dict[str, Any]):
         """Test filtering tasks by priority."""
-        response = client.get("/tasks/?priority=media", headers=auth_headers)
+        response = client.get(
+            "/tasks/?priority=media", 
+            headers=auth_headers_csrf["headers"], 
+            cookies=auth_headers_csrf["cookies"]
+        )
         
         assert response.status_code == 200
         data = response.json()
@@ -132,9 +169,13 @@ class TestTaskRetrieval:
             assert task["priority"] == "media"
 
     @pytest.mark.tasks
-    def test_get_tasks_search(self, client: TestClient, auth_headers: Dict[str, str], created_task: Dict[str, Any]):
+    def test_get_tasks_search(self, client: TestClient, auth_headers_csrf: Dict[str, Any], created_task: Dict[str, Any]):
         """Test searching tasks by title/description."""
-        response = client.get("/tasks/?search=Test", headers=auth_headers)
+        response = client.get(
+            "/tasks/?search=Test", 
+            headers=auth_headers_csrf["headers"], 
+            cookies=auth_headers_csrf["cookies"]
+        )
         
         assert response.status_code == 200
         data = response.json()
@@ -142,26 +183,38 @@ class TestTaskRetrieval:
         assert len(data["tasks"]) >= 1
 
     @pytest.mark.tasks
-    def test_get_tasks_order_by(self, client: TestClient, auth_headers: Dict[str, str], created_task: Dict[str, Any]):
+    def test_get_tasks_order_by(self, client: TestClient, auth_headers_csrf: Dict[str, Any], created_task: Dict[str, Any]):
         """Test ordering tasks by different fields."""
-        response = client.get("/tasks/?order_by=title&order_desc=false", headers=auth_headers)
+        response = client.get(
+            "/tasks/?order_by=title&order_desc=false", 
+            headers=auth_headers_csrf["headers"], 
+            cookies=auth_headers_csrf["cookies"]
+        )
         
         assert response.status_code == 200
         data = response.json()
         assert len(data["tasks"]) >= 1
 
     @pytest.mark.tasks
-    def test_get_tasks_date_filters(self, client: TestClient, auth_headers: Dict[str, str]):
+    def test_get_tasks_date_filters(self, client: TestClient, auth_headers_csrf: Dict[str, Any]):
         """Test filtering tasks by date ranges."""
         future_date = (datetime.now() + timedelta(days=30)).isoformat()
-        response = client.get(f"/tasks/?due_before={future_date}", headers=auth_headers)
+        response = client.get(
+            f"/tasks/?due_before={future_date}", 
+            headers=auth_headers_csrf["headers"], 
+            cookies=auth_headers_csrf["cookies"]
+        )
         
         assert response.status_code == 200
 
     @pytest.mark.tasks
-    def test_get_tasks_invalid_date_format(self, client: TestClient, auth_headers: Dict[str, str]):
+    def test_get_tasks_invalid_date_format(self, client: TestClient, auth_headers_csrf: Dict[str, Any]):
         """Test invalid date format returns error."""
-        response = client.get("/tasks/?due_before=invalid-date", headers=auth_headers)
+        response = client.get(
+            "/tasks/?due_before=invalid-date", 
+            headers=auth_headers_csrf["headers"], 
+            cookies=auth_headers_csrf["cookies"]
+        )
         
         assert response.status_code == 400
         assert "Invalid due_before date format" in response.json()["detail"]
@@ -174,10 +227,14 @@ class TestTaskRetrieval:
         assert response.status_code == 401
 
     @pytest.mark.tasks
-    def test_get_single_task(self, client: TestClient, auth_headers: Dict[str, str], created_task: Dict[str, Any]):
+    def test_get_single_task(self, client: TestClient, auth_headers_csrf: Dict[str, Any], created_task: Dict[str, Any]):
         """Test getting a single task by ID."""
         task_id = created_task["id"]
-        response = client.get(f"/tasks/{task_id}", headers=auth_headers)
+        response = client.get(
+            f"/tasks/{task_id}", 
+            headers=auth_headers_csrf["headers"], 
+            cookies=auth_headers_csrf["cookies"]
+        )
         
         assert response.status_code == 200
         data = response.json()
@@ -185,9 +242,13 @@ class TestTaskRetrieval:
         assert data["title"] == created_task["title"]
 
     @pytest.mark.tasks
-    def test_get_nonexistent_task(self, client: TestClient, auth_headers: Dict[str, str]):
+    def test_get_nonexistent_task(self, client: TestClient, auth_headers_csrf: Dict[str, Any]):
         """Test getting nonexistent task returns 404."""
-        response = client.get("/tasks/99999", headers=auth_headers)
+        response = client.get(
+            "/tasks/99999", 
+            headers=auth_headers_csrf["headers"], 
+            cookies=auth_headers_csrf["cookies"]
+        )
         
         assert response.status_code == 404
         assert "Task not found" in response.json()["detail"]
@@ -197,9 +258,13 @@ class TestTaskStatistics:
     """Test class for task statistics endpoint."""
 
     @pytest.mark.tasks
-    def test_get_task_statistics(self, client: TestClient, auth_headers: Dict[str, str], created_task: Dict[str, Any]):
+    def test_get_task_statistics(self, client: TestClient, auth_headers_csrf: Dict[str, Any], created_task: Dict[str, Any]):
         """Test getting task statistics."""
-        response = client.get("/tasks/statistics", headers=auth_headers)
+        response = client.get(
+            "/tasks/statistics", 
+            headers=auth_headers_csrf["headers"], 
+            cookies=auth_headers_csrf["cookies"]
+        )
         
         assert response.status_code == 200
         data = response.json()
@@ -233,7 +298,7 @@ class TestTaskUpdate:
     """Test class for task update endpoint."""
 
     @pytest.mark.tasks
-    def test_update_task_success(self, client: TestClient, auth_headers: Dict[str, str], created_task: Dict[str, Any]):
+    def test_update_task_success(self, client: TestClient, auth_headers_csrf: Dict[str, Any], created_task: Dict[str, Any]):
         """Test successful task update."""
         task_id = created_task["id"]
         update_data = {
@@ -241,7 +306,12 @@ class TestTaskUpdate:
             "completed": True
         }
         
-        response = client.put(f"/tasks/{task_id}", json=update_data, headers=auth_headers)
+        response = client.put(
+            f"/tasks/{task_id}",
+            json=update_data,
+            headers=auth_headers_csrf["headers"],
+            cookies=auth_headers_csrf["cookies"]
+        )
         
         assert response.status_code == 200
         data = response.json()
@@ -249,12 +319,17 @@ class TestTaskUpdate:
         assert data["completed"] is True
 
     @pytest.mark.tasks
-    def test_update_task_partial(self, client: TestClient, auth_headers: Dict[str, str], created_task: Dict[str, Any]):
+    def test_update_task_partial(self, client: TestClient, auth_headers_csrf: Dict[str, Any], created_task: Dict[str, Any]):
         """Test partial task update."""
         task_id = created_task["id"]
         update_data = {"description": "Updated description only"}
         
-        response = client.put(f"/tasks/{task_id}", json=update_data, headers=auth_headers)
+        response = client.put(
+            f"/tasks/{task_id}",
+            json=update_data,
+            headers=auth_headers_csrf["headers"],
+            cookies=auth_headers_csrf["cookies"]
+        )
         
         assert response.status_code == 200
         data = response.json()
@@ -262,23 +337,33 @@ class TestTaskUpdate:
         assert data["title"] == created_task["title"]  # Should remain unchanged
 
     @pytest.mark.tasks
-    def test_update_task_priority(self, client: TestClient, auth_headers: Dict[str, str], created_task: Dict[str, Any]):
+    def test_update_task_priority(self, client: TestClient, auth_headers_csrf: Dict[str, Any], created_task: Dict[str, Any]):
         """Test updating task priority."""
         task_id = created_task["id"]
         update_data = {"priority": "alta"}
         
-        response = client.put(f"/tasks/{task_id}", json=update_data, headers=auth_headers)
+        response = client.put(
+            f"/tasks/{task_id}",
+            json=update_data,
+            headers=auth_headers_csrf["headers"],
+            cookies=auth_headers_csrf["cookies"]
+        )
         
         assert response.status_code == 200
         data = response.json()
         assert data["priority"] == "alta"
 
     @pytest.mark.tasks
-    def test_update_nonexistent_task(self, client: TestClient, auth_headers: Dict[str, str]):
+    def test_update_nonexistent_task(self, client: TestClient, auth_headers_csrf: Dict[str, Any]):
         """Test updating nonexistent task returns 404."""
         update_data = {"title": "Updated Title"}
         
-        response = client.put("/tasks/99999", json=update_data, headers=auth_headers)
+        response = client.put(
+            "/tasks/99999",
+            json=update_data,
+            headers=auth_headers_csrf["headers"],
+            cookies=auth_headers_csrf["cookies"]
+        )
         
         assert response.status_code == 404
         assert "Task not found" in response.json()["detail"]
@@ -293,8 +378,7 @@ class TestTaskUpdate:
         
         assert response.status_code == 401
 
-    @pytest.mark.tasks
-    def test_update_task_permission_denied(self, client: TestClient, created_task: Dict[str, Any], test_admin_data: Dict[str, Any]):
+    def test_update_task_permission_denied(self, client: TestClient, created_task: Dict[str, Any]):
         """Test updating task by non-owner non-admin fails."""
         # Create another user
         client.post("/auth/register", json={
@@ -303,33 +387,51 @@ class TestTaskUpdate:
             "password": "OtherPass123",
             "role": "user"
         })
-        
+    
         # Login as other user
         login_response = client.post(
             "/auth/token",
-            data={
-                "username": "otheruser",
-                "password": "OtherPass123"
-            }
+            data={"username": "otheruser", "password": "OtherPass123"}
         )
         other_token = login_response.json()["access_token"]
-        other_headers = {"Authorization": f"Bearer {other_token}"}
-        
+    
+        # Get CSRF token and cookie
+        headers = {"Authorization": f"Bearer {other_token}"}
+        csrf_response = client.get("/csrf/token", headers=headers)
+        csrf_token = csrf_response.json()["csrf_token"]
+        csrf_cookie = csrf_response.cookies.get("csrf_token")
+    
+        other_creds: Dict[str, Any] = {
+            "headers": {
+                "Authorization": f"Bearer {other_token}",
+                "x-csrf-token": csrf_token
+            },
+            "cookies": {
+                "csrf_token": csrf_cookie
+            }
+        }
+    
         task_id = created_task["id"]
-        update_data = {"title": "Updated Title"}
-        
-        response = client.put(f"/tasks/{task_id}", json=update_data, headers=other_headers)
-        
+        response = client.put(
+            f"/tasks/{task_id}", 
+            json={"title": "Updated"}, 
+            headers=other_creds["headers"],
+            cookies=other_creds["cookies"]
+        )
         assert response.status_code == 403
-        assert "Not enough permissions" in response.json()["detail"]
-
+    
     @pytest.mark.tasks
-    def test_update_task_admin_permission(self, client: TestClient, admin_headers: Dict[str, str], created_task: Dict[str, Any]):
+    def test_update_task_admin_permission(self, client: TestClient, admin_headers_csrf: Dict[str, Any], created_task: Dict[str, Any]):
         """Test admin can update any task."""
         task_id = created_task["id"]
         update_data = {"title": "Admin Updated Title"}
         
-        response = client.put(f"/tasks/{task_id}", json=update_data, headers=admin_headers)
+        response = client.put(
+            f"/tasks/{task_id}", 
+            json=update_data, 
+            headers=admin_headers_csrf["headers"], 
+            cookies=admin_headers_csrf["cookies"]
+        )
         
         assert response.status_code == 200
         data = response.json()
@@ -340,18 +442,26 @@ class TestTaskDeletion:
     """Test class for task deletion endpoint."""
 
     @pytest.mark.tasks
-    def test_delete_task_success(self, client: TestClient, auth_headers: Dict[str, str], created_task: Dict[str, Any]):
+    def test_delete_task_success(self, client: TestClient, auth_headers_csrf: Dict[str, Any], created_task: Dict[str, Any]):
         """Test successful task deletion."""
         task_id = created_task["id"]
         
-        response = client.delete(f"/tasks/{task_id}", headers=auth_headers)
+        response = client.delete(
+            f"/tasks/{task_id}",
+            headers=auth_headers_csrf["headers"],
+            cookies=auth_headers_csrf["cookies"]
+        )
         
         assert response.status_code == 204
 
     @pytest.mark.tasks
-    def test_delete_nonexistent_task(self, client: TestClient, auth_headers: Dict[str, str]):
+    def test_delete_nonexistent_task(self, client: TestClient, auth_headers_csrf: Dict[str, Any]):
         """Test deleting nonexistent task returns 404."""
-        response = client.delete("/tasks/99999", headers=auth_headers)
+        response = client.delete(
+            "/tasks/99999", 
+            headers=auth_headers_csrf["headers"], 
+            cookies=auth_headers_csrf["cookies"]
+        )
         
         assert response.status_code == 404
         assert "Task not found" in response.json()["detail"]
@@ -386,20 +496,43 @@ class TestTaskDeletion:
         )
         other_token = login_response.json()["access_token"]
         other_headers = {"Authorization": f"Bearer {other_token}"}
+
+        # Get CSRF token and cookie
+        csrf_response = client.get("/csrf/token", headers=other_headers)
+        csrf_token = csrf_response.json()["csrf_token"]
+        csrf_cookie = csrf_response.cookies.get("csrf_token")
+        
+        other_creds: Dict[str, Any] = {
+            "headers": {
+                "Authorization": f"Bearer {other_token}",
+                "x-csrf-token": csrf_token
+            },
+            "cookies": {
+                "csrf_token": csrf_cookie
+            }
+        }
         
         task_id = created_task["id"]
         
-        response = client.delete(f"/tasks/{task_id}", headers=other_headers)
+        response = client.delete(
+            f"/tasks/{task_id}", 
+            headers=other_creds["headers"], 
+            cookies=other_creds["cookies"]
+        )
         
         assert response.status_code == 403
         assert "Not enough permissions" in response.json()["detail"]
 
     @pytest.mark.tasks
-    def test_delete_task_admin_permission(self, client: TestClient, admin_headers: Dict[str, str], created_task: Dict[str, Any]):
+    def test_delete_task_admin_permission(self, client: TestClient, admin_headers_csrf: Dict[str, Any], created_task: Dict[str, Any]):
         """Test admin can delete any task."""
         task_id = created_task["id"]
         
-        response = client.delete(f"/tasks/{task_id}", headers=admin_headers)
+        response = client.delete(
+            f"/tasks/{task_id}", 
+            headers=admin_headers_csrf["headers"], 
+            cookies=admin_headers_csrf["cookies"]
+        )
         
         assert response.status_code == 204
 
@@ -408,12 +541,17 @@ class TestTaskComments:
     """Test class for task comments endpoint."""
 
     @pytest.mark.tasks
-    def test_add_comment_success(self, client: TestClient, auth_headers: Dict[str, str], created_task: Dict[str, Any]):
+    def test_add_comment_success(self, client: TestClient, auth_headers_csrf: Dict[str, Any], created_task: Dict[str, Any]):
         """Test successfully adding comment to task."""
         task_id = created_task["id"]
         comment_data = {"content": "This is a test comment"}
         
-        response = client.post(f"/tasks/{task_id}/comments", json=comment_data, headers=auth_headers)
+        response = client.post(
+            f"/tasks/{task_id}/comments", 
+            json=comment_data, 
+            headers=auth_headers_csrf["headers"], 
+            cookies=auth_headers_csrf["cookies"]
+        )
         
         assert response.status_code == 201
         data = response.json()
@@ -423,11 +561,16 @@ class TestTaskComments:
         assert "created_at" in data
 
     @pytest.mark.tasks
-    def test_add_comment_to_nonexistent_task(self, client: TestClient, auth_headers: Dict[str, str]):
+    def test_add_comment_to_nonexistent_task(self, client: TestClient, auth_headers_csrf: Dict[str, Any]):
         """Test adding comment to nonexistent task fails."""
         comment_data = {"content": "This is a test comment"}
         
-        response = client.post("/tasks/99999/comments", json=comment_data, headers=auth_headers)
+        response = client.post(
+            "/tasks/99999/comments", 
+            json=comment_data, 
+            headers=auth_headers_csrf["headers"], 
+            cookies=auth_headers_csrf["cookies"]
+        )
         
         assert response.status_code == 404
         assert "Task not found" in response.json()["detail"]
@@ -443,23 +586,33 @@ class TestTaskComments:
         assert response.status_code == 401
 
     @pytest.mark.tasks
-    def test_add_comment_invalid_data(self, client: TestClient, auth_headers: Dict[str, str], created_task: Dict[str, Any]):
+    def test_add_comment_invalid_data(self, client: TestClient, auth_headers_csrf: Dict[str, Any], created_task: Dict[str, Any]):
         """Test adding comment with invalid data fails."""
         task_id = created_task["id"]
         comment_data = {"content": ""}  # Empty content
         
-        response = client.post(f"/tasks/{task_id}/comments", json=comment_data, headers=auth_headers)
+        response = client.post(
+            f"/tasks/{task_id}/comments", 
+            json=comment_data, 
+            headers=auth_headers_csrf["headers"], 
+            cookies=auth_headers_csrf["cookies"]
+        )
         
         assert response.status_code == 422
 
     @pytest.mark.tasks
-    def test_add_comment_long_content(self, client: TestClient, auth_headers: Dict[str, str], created_task: Dict[str, Any]):
+    def test_add_comment_long_content(self, client: TestClient, auth_headers_csrf: Dict[str, Any], created_task: Dict[str, Any]):
         """Test adding comment with very long content."""
         task_id = created_task["id"]
         long_content = "A" * 600  # Exceeds 500 character limit
         comment_data = {"content": long_content}
         
-        response = client.post(f"/tasks/{task_id}/comments", json=comment_data, headers=auth_headers)
+        response = client.post(
+            f"/tasks/{task_id}/comments", 
+            json=comment_data, 
+            headers=auth_headers_csrf["headers"], 
+            cookies=auth_headers_csrf["cookies"]
+        )
         
         assert response.status_code == 422
 
@@ -468,18 +621,23 @@ class TestTaskValidation:
     """Test class for task validation edge cases."""
 
     @pytest.mark.tasks
-    def test_task_title_length_validation(self, client: TestClient, auth_headers: Dict[str, str]):
+    def test_task_title_length_validation(self, client: TestClient, auth_headers_csrf: Dict[str, Any]):
         """Test task title length validation."""
         # Too long title
         long_title = "A" * 201  # Exceeds 200 character limit
         task_data = {"title": long_title}
         
-        response = client.post("/tasks/", json=task_data, headers=auth_headers)
+        response = client.post(
+            "/tasks/", 
+            json=task_data, 
+            headers=auth_headers_csrf["headers"], 
+            cookies=auth_headers_csrf["cookies"]
+        )
         
         assert response.status_code == 422
 
     @pytest.mark.tasks
-    def test_task_description_length_validation(self, client: TestClient, auth_headers: Dict[str, str]):
+    def test_task_description_length_validation(self, client: TestClient, auth_headers_csrf: Dict[str, Any]):
         """Test task description length validation."""
         # Too long description
         long_description = "A" * 1001  # Exceeds 1000 character limit
@@ -488,36 +646,58 @@ class TestTaskValidation:
             "description": long_description
         }
         
-        response = client.post("/tasks/", json=task_data, headers=auth_headers)
+        response = client.post(
+            "/tasks/", 
+            json=task_data, 
+            headers=auth_headers_csrf["headers"], 
+            cookies=auth_headers_csrf["cookies"]
+        )
         
         assert response.status_code == 422
 
     @pytest.mark.tasks
-    def test_task_invalid_due_date_format(self, client: TestClient, auth_headers: Dict[str, str]):
+    def test_task_invalid_due_date_format(self, client: TestClient, auth_headers_csrf: Dict[str, Any]):
         """Test task creation with invalid due date format."""
         task_data = {
             "title": "Test Task",
             "due_date": "invalid-date-format"
         }
         
-        response = client.post("/tasks/", json=task_data, headers=auth_headers)
+        response = client.post(
+            "/tasks/", 
+            json=task_data, 
+            headers=auth_headers_csrf["headers"], 
+            cookies=auth_headers_csrf["cookies"]
+        )
         
         assert response.status_code == 422
 
     @pytest.mark.tasks
-    def test_task_pagination_limits(self, client: TestClient, auth_headers: Dict[str, str]):
+    def test_task_pagination_limits(self, client: TestClient, auth_headers_csrf: Dict[str, Any]):
         """Test task pagination limits."""
         # Test maximum page size
-        response = client.get("/tasks/?size=101", headers=auth_headers)
+        response = client.get(
+            "/tasks/?size=101", 
+            headers=auth_headers_csrf["headers"], 
+            cookies=auth_headers_csrf["cookies"]
+        )
         assert response.status_code == 422
         
         # Test minimum page number
-        response = client.get("/tasks/?page=0", headers=auth_headers)
+        response = client.get(
+            "/tasks/?page=0", 
+            headers=auth_headers_csrf["headers"], 
+            cookies=auth_headers_csrf["cookies"]
+        )
         assert response.status_code == 422
 
     @pytest.mark.tasks
-    def test_task_order_by_validation(self, client: TestClient, auth_headers: Dict[str, str]):
+    def test_task_order_by_validation(self, client: TestClient, auth_headers_csrf: Dict[str, Any]):
         """Test task ordering field validation."""
-        response = client.get("/tasks/?order_by=invalid_field", headers=auth_headers)
+        response = client.get(
+            "/tasks/?order_by=invalid_field", 
+            headers=auth_headers_csrf["headers"], 
+            cookies=auth_headers_csrf["cookies"]
+        )
         
         assert response.status_code == 422

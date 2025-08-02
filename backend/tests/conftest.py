@@ -150,16 +150,50 @@ def admin_token(client: TestClient, created_admin: UserModel, test_admin_data: D
     return response.json()["access_token"]
 
 
-@pytest.fixture
-def auth_headers(user_token: str) -> Dict[str, str]:
-    """Get authorization headers for test user."""
-    return {"Authorization": f"Bearer {user_token}"}
+@pytest.fixture(scope="function")
+def auth_headers_csrf(client: TestClient, user_token: str) -> Dict[str, Any]:
+    """Get CSRF token for authenticated user with cookies"""
+    response = client.get("/tasks", headers={"Authorization": f"Bearer {user_token}"})
+    csrf_token = response.headers["X-CSRF-Token"]
+    csrf_cookie = response.cookies.get("csrf_token")
+    
+    return {
+        "headers": {
+            "Authorization": f"Bearer {user_token}",
+            "x-csrf-token": csrf_token
+        },
+        "cookies": {
+            "csrf_token": csrf_cookie
+        }
+    }
 
+@pytest.fixture(scope="function")
+def admin_headers_csrf(client: TestClient, admin_token: str) -> Dict[str, Any]:
+    """Get CSRF token for admin user with cookies"""
+    response = client.get("/tasks", headers={"Authorization": f"Bearer {admin_token}"})
+    csrf_token = response.headers["X-CSRF-Token"]
+    csrf_cookie = response.cookies.get("csrf_token")
+    
+    return {
+        "headers": {
+            "Authorization": f"Bearer {admin_token}",
+            "x-csrf-token": csrf_token
+        },
+        "cookies": {
+            "csrf_token": csrf_cookie
+        }
+    }
 
 @pytest.fixture
-def admin_headers(admin_token: str) -> Dict[str, str]:
-    """Get authorization headers for test admin."""
-    return {"Authorization": f"Bearer {admin_token}"}
+def created_task(client: TestClient, auth_headers_csrf: Dict[str, Any], test_task_data: Dict[str, Any]) -> Dict[str, Any]:
+    """Create a test task in the database with CSRF protection"""
+    response = client.post(
+        "/tasks/", 
+        json=test_task_data, 
+        headers=auth_headers_csrf["headers"],
+        cookies=auth_headers_csrf["cookies"]
+    )
+    return response.json()
 
 
 @pytest.fixture
@@ -171,13 +205,6 @@ def test_task_data() -> Dict[str, Any]:
         "priority": "media",
         "due_date": "2024-12-31T23:59:59"
     }
-
-
-@pytest.fixture
-def created_task(client: TestClient, auth_headers: Dict[str, str], test_task_data: Dict[str, Any]) -> Dict[str, Any]:
-    """Create a test task in the database."""
-    response = client.post("/tasks/", json=test_task_data, headers=auth_headers)
-    return response.json()
 
 
 # Cleanup and mocking fixtures

@@ -10,8 +10,10 @@ from app.database import engine
 from app.loki_handler import setup_logging
 from app.routers import tasks
 from app.routers import auth
+from app.routers import csrf
 from app.schemas.main import HealthCheckResponse
 from app.middleware import limiter
+from app.middleware.csrf import CSRFDoubleSubmitMiddleware
 from app.config import settings
 
 # Load environment variables from .env file
@@ -27,6 +29,10 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 # Include routers
 app.include_router(tasks.router)
 app.include_router(auth.router)
+app.include_router(csrf.router)
+
+# Add CSRF protection middleware
+app.add_middleware(CSRFDoubleSubmitMiddleware)
 
 @app.get("/", tags=["Root"])
 @limiter.limit(f"{settings.rate_limit_requests}/{settings.rate_limit_window}")

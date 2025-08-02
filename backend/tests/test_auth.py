@@ -192,9 +192,13 @@ class TestAuthProfile:
     """Test class for profile management endpoints."""
 
     @pytest.mark.auth
-    def test_get_current_user(self, client: TestClient, auth_headers: Dict[str, str], created_user: UserModel):
+    def test_get_current_user(self, client: TestClient, auth_headers_csrf: Dict[str, Any], created_user: UserModel):
         """Test getting current user profile."""
-        response = client.get("/auth/me", headers=auth_headers)
+        response = client.get(
+            "/auth/me", 
+            headers=auth_headers_csrf["headers"], 
+            cookies=auth_headers_csrf["cookies"]
+        )
         
         assert response.status_code == 200
         data = response.json()
@@ -260,53 +264,78 @@ class TestAuthProfile:
         assert response.status_code == 401
 
     @pytest.mark.auth
-    def test_update_user_profile_username(self, client: TestClient, auth_headers: Dict[str, str]):
+    def test_update_user_profile_username(self, client: TestClient, auth_headers_csrf: Dict[str, Any]):
         """Test updating user profile username."""
         update_data = {"username": "newusername"}
         
-        response = client.put("/auth/me", json=update_data, headers=auth_headers)
+        response = client.put(
+            "/auth/me", 
+            json=update_data, 
+            headers=auth_headers_csrf["headers"], 
+            cookies=auth_headers_csrf["cookies"]
+        )
         
         assert response.status_code == 200
         data = response.json()
         assert data["username"] == "newusername"
 
     @pytest.mark.auth
-    def test_update_user_profile_email(self, client: TestClient, auth_headers: Dict[str, str]):
+    def test_update_user_profile_email(self, client: TestClient, auth_headers_csrf: Dict[str, Any]):
         """Test updating user profile email."""
         update_data = {"email": "newemail@example.com"}
         
-        response = client.put("/auth/me", json=update_data, headers=auth_headers)
+        response = client.put(
+            "/auth/me", 
+            json=update_data, 
+            headers=auth_headers_csrf["headers"], 
+            cookies=auth_headers_csrf["cookies"]
+        )
         
         assert response.status_code == 200
         data = response.json()
         assert data["email"] == "newemail@example.com"
 
     @pytest.mark.auth
-    def test_update_user_profile_duplicate_username(self, client: TestClient, auth_headers: Dict[str, str], created_admin: UserModel):
+    def test_update_user_profile_duplicate_username(self, client: TestClient, auth_headers_csrf: Dict[str, Any], created_admin: UserModel):
         """Test updating username to existing one fails."""
         update_data = {"username": created_admin.username}
         
-        response = client.put("/auth/me", json=update_data, headers=auth_headers)
+        response = client.put(
+            "/auth/me", 
+            json=update_data, 
+            headers=auth_headers_csrf["headers"], 
+            cookies=auth_headers_csrf["cookies"]
+        )
         
         assert response.status_code == 400
         assert "Username already taken" in response.json()["detail"]
 
     @pytest.mark.auth
-    def test_update_user_role_non_admin(self, client: TestClient, auth_headers: Dict[str, str]):
+    def test_update_user_role_non_admin(self, client: TestClient, auth_headers_csrf: Dict[str, Any]):
         """Test non-admin user cannot update role."""
         update_data = {"role": "admin"}
         
-        response = client.put("/auth/me", json=update_data, headers=auth_headers)
+        response = client.put(
+            "/auth/me", 
+            json=update_data, 
+            headers=auth_headers_csrf["headers"], 
+            cookies=auth_headers_csrf["cookies"]
+        )
         
         assert response.status_code == 403
         assert "Not enough permissions" in response.json()["detail"]
 
     @pytest.mark.auth
-    def test_update_user_role_admin(self, client: TestClient, admin_headers: Dict[str, str]):
+    def test_update_user_role_admin(self, client: TestClient, admin_headers_csrf: Dict[str, Any]):
         """Test admin user can update role."""
         update_data = {"role": "user"}
         
-        response = client.put("/auth/me", json=update_data, headers=admin_headers)
+        response = client.put(
+            "/auth/me", 
+            json=update_data, 
+            headers=admin_headers_csrf["headers"], 
+            cookies=admin_headers_csrf["cookies"]
+        )
         
         assert response.status_code == 200
         data = response.json()
@@ -317,40 +346,55 @@ class TestAuthPasswordChange:
     """Test class for password change endpoint."""
 
     @pytest.mark.auth
-    def test_change_password_success(self, client: TestClient, auth_headers: Dict[str, str], test_user_data: Dict[str, Any]):
+    def test_change_password_success(self, client: TestClient, auth_headers_csrf: Dict[str, Any], test_user_data: Dict[str, Any]):
         """Test successful password change."""
         password_data = {
             "current_password": test_user_data["password"],
             "new_password": "NewTestPass123"
         }
         
-        response = client.put("/auth/me/password", json=password_data, headers=auth_headers)
+        response = client.put(
+            "/auth/me/password", 
+            json=password_data, 
+            headers=auth_headers_csrf["headers"], 
+            cookies=auth_headers_csrf["cookies"]
+        )
         
         assert response.status_code == 200
         assert "Password updated successfully" in response.json()["message"]
 
     @pytest.mark.auth
-    def test_change_password_wrong_current(self, client: TestClient, auth_headers: Dict[str, str]):
+    def test_change_password_wrong_current(self, client: TestClient, auth_headers_csrf: Dict[str, Any]):
         """Test password change with wrong current password fails."""
         password_data = {
             "current_password": "wrongpassword",
             "new_password": "NewTestPass123"
         }
         
-        response = client.put("/auth/me/password", json=password_data, headers=auth_headers)
+        response = client.put(
+            "/auth/me/password", 
+            json=password_data, 
+            headers=auth_headers_csrf["headers"], 
+            cookies=auth_headers_csrf["cookies"]
+        )
         
         assert response.status_code == 400
         assert "Current password is incorrect" in response.json()["detail"]
 
     @pytest.mark.auth
-    def test_change_password_weak_new(self, client: TestClient, auth_headers: Dict[str, str], test_user_data: Dict[str, Any]):
+    def test_change_password_weak_new(self, client: TestClient, auth_headers_csrf: Dict[str, Any], test_user_data: Dict[str, Any]):
         """Test password change with weak new password fails."""
         password_data = {
             "current_password": test_user_data["password"],
             "new_password": "weak"
         }
         
-        response = client.put("/auth/me/password", json=password_data, headers=auth_headers)
+        response = client.put(
+            "/auth/me/password", 
+            json=password_data, 
+            headers=auth_headers_csrf["headers"], 
+            cookies=auth_headers_csrf["cookies"]
+        )
         
         assert response.status_code == 422
 
@@ -371,51 +415,79 @@ class TestAuthAdminActions:
     """Test class for admin-only endpoints."""
 
     @pytest.mark.auth
-    def test_deactivate_user_admin(self, client: TestClient, admin_headers: Dict[str, str], created_user: UserModel):
+    def test_deactivate_user_admin(self, client: TestClient, admin_headers_csrf: Dict[str, Any], created_user: UserModel):
         """Test admin can deactivate user."""
-        response = client.put(f"/auth/users/{created_user.id}/deactivate", headers=admin_headers)
+        response = client.put(
+            f"/auth/users/{created_user.id}/deactivate", 
+            headers=admin_headers_csrf["headers"], 
+            cookies=admin_headers_csrf["cookies"]
+        )
         
         assert response.status_code == 200
         assert "User deactivated successfully" in response.json()["message"]
 
     @pytest.mark.auth
-    def test_activate_user_admin(self, client: TestClient, admin_headers: Dict[str, str], created_user: UserModel):
+    def test_activate_user_admin(self, client: TestClient, admin_headers_csrf: Dict[str, Any], created_user: UserModel):
         """Test admin can activate user."""
         # First deactivate
-        client.put(f"/auth/users/{created_user.id}/deactivate", headers=admin_headers)
+        client.put(
+            f"/auth/users/{created_user.id}/deactivate", 
+            headers=admin_headers_csrf["headers"], 
+            cookies=admin_headers_csrf["cookies"]
+        )
         
         # Then activate
-        response = client.put(f"/auth/users/{created_user.id}/activate", headers=admin_headers)
+        response = client.put(
+            f"/auth/users/{created_user.id}/activate", 
+            headers=admin_headers_csrf["headers"], 
+            cookies=admin_headers_csrf["cookies"]
+        )
         
         assert response.status_code == 200
         assert "User activated successfully" in response.json()["message"]
 
     @pytest.mark.auth
-    def test_deactivate_user_non_admin(self, client: TestClient, auth_headers: Dict[str, str], created_admin: UserModel):
+    def test_deactivate_user_non_admin(self, client: TestClient, auth_headers_csrf: Dict[str, Any], created_admin: UserModel):
         """Test non-admin cannot deactivate user."""
-        response = client.put(f"/auth/users/{created_admin.id}/deactivate", headers=auth_headers)
+        response = client.put(
+            f"/auth/users/{created_admin.id}/deactivate", 
+            headers=auth_headers_csrf["headers"], 
+            cookies=auth_headers_csrf["cookies"]
+        )
         
         assert response.status_code == 403
 
     @pytest.mark.auth
-    def test_activate_user_non_admin(self, client: TestClient, auth_headers: Dict[str, str], created_admin: UserModel):
+    def test_activate_user_non_admin(self, client: TestClient, auth_headers_csrf: Dict[str, Any], created_admin: UserModel):
         """Test non-admin cannot activate user."""
-        response = client.put(f"/auth/users/{created_admin.id}/activate", headers=auth_headers)
+        response = client.put(
+            f"/auth/users/{created_admin.id}/activate", 
+            headers=auth_headers_csrf["headers"], 
+            cookies=auth_headers_csrf["cookies"]
+        )
         
         assert response.status_code == 403
 
     @pytest.mark.auth
-    def test_deactivate_nonexistent_user(self, client: TestClient, admin_headers: Dict[str, str]):
+    def test_deactivate_nonexistent_user(self, client: TestClient, admin_headers_csrf: Dict[str, Any]):
         """Test deactivating nonexistent user fails."""
-        response = client.put("/auth/users/99999/deactivate", headers=admin_headers)
+        response = client.put(
+            "/auth/users/99999/deactivate", 
+            headers=admin_headers_csrf["headers"], 
+            cookies=admin_headers_csrf["cookies"]
+        )
         
         assert response.status_code == 404
         assert "User not found" in response.json()["detail"]
 
     @pytest.mark.auth
-    def test_activate_nonexistent_user(self, client: TestClient, admin_headers: Dict[str, str]):
+    def test_activate_nonexistent_user(self, client: TestClient, admin_headers_csrf: Dict[str, Any]):
         """Test activating nonexistent user fails."""
-        response = client.put("/auth/users/99999/activate", headers=admin_headers)
+        response = client.put(
+            "/auth/users/99999/activate", 
+            headers=admin_headers_csrf["headers"], 
+            cookies=admin_headers_csrf["cookies"]
+        )
         
         assert response.status_code == 404
         assert "User not found" in response.json()["detail"]
