@@ -336,3 +336,12 @@ class TestCSRFProtection:
         # Test DELETE without CSRF
         response = client.delete("/tasks/1", headers=headers)
         assert response.status_code == status.HTTP_403_FORBIDDEN
+
+class TestSQLInjectionProtection():
+    def test_sql_injection_protection(self, client: TestClient):
+        """Test SQL injection protection with SQLAlchemy."""
+        response = client.post(
+            "/auth/login",
+            data={"username": "admin_valid' OR 1=1--", "password": "hack"}
+        )
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
