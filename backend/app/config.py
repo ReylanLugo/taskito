@@ -1,5 +1,5 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
-import os
+from typing import List
 
 class Settings(BaseSettings):
     # Database settings
@@ -32,6 +32,9 @@ class Settings(BaseSettings):
     rate_limit_window: str = "minutes"
     rate_limit_auth_requests: int = 3
     rate_limit_auth_window: str = "minutes"
+
+    # CORS settings
+    CORS_ALLOW_ORIGINS: List[str] = []
 
     model_config = SettingsConfigDict(
         env_file=".env.local", env_file_encoding="utf-8", case_sensitive=False

@@ -12,9 +12,10 @@ from app.routers import tasks
 from app.routers import auth
 from app.routers import csrf
 from app.schemas.main import HealthCheckResponse
-from app.middleware import limiter
-from app.middleware.csrf import CSRFDoubleSubmitMiddleware
+from app.middleware import limiter, SecurityHeadersMiddleware, CSRFDoubleSubmitMiddleware
 from app.config import settings
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 
 # Load environment variables from .env file
 load_dotenv()
@@ -26,13 +27,29 @@ app = FastAPI(title="Taskito API", description="A simple API for Taskito")
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+# Add gzip middleware
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+
+# CORS setup
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.CORS_ALLOW_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["X-CSRF-Token", "Content-Type"],
+)
+
+# Add security headers middleware
+app.add_middleware(SecurityHeadersMiddleware)
+
+# Add CSRF protection middleware
+app.add_middleware(CSRFDoubleSubmitMiddleware)
+
 # Include routers
 app.include_router(tasks.router)
 app.include_router(auth.router)
 app.include_router(csrf.router)
 
-# Add CSRF protection middleware
-app.add_middleware(CSRFDoubleSubmitMiddleware)
 
 @app.get("/", tags=["Root"])
 @limiter.limit(f"{settings.rate_limit_requests}/{settings.rate_limit_window}")
