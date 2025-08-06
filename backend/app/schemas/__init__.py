@@ -5,7 +5,7 @@ from .task import (
     Task,
     TaskStatistics,
     TaskFilter,
-    TaskResponse,
+    TasksResponse,
     CommentBase,
     CommentCreate,
     Comment

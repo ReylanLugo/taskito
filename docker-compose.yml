@@ -1,6 +1,19 @@
 version: "3.8"
 
 services:
+  nginx:
+    build: ./nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - api
+      - frontend
+      - grafana
+    networks:
+      - taskito-network
+      - loki
+
   api:
     build:
       context: ./backend
@@ -69,8 +82,26 @@ services:
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SERVER_SERVE_FROM_SUB_PATH=true
     networks:
       - loki
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    env_file:
+      - .env.local
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_API_URL=https://localhost/api
+      - NODE_TLS_REJECT_UNAUTHORIZED=0  # Allow self-signed certificates in development
+    depends_on:
+      - api
+    networks:
+      - taskito-network
 
 volumes:
   postgres-data:

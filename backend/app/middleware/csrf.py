@@ -24,7 +24,7 @@ class CSRFDoubleSubmitMiddleware(BaseHTTPMiddleware):
     def __init__(self, app):
         super().__init__(app)
         self.csrf_cookie_name = "csrf_token"
-        self.csrf_header_name = "x-csrf-token"
+        self.csrf_header_name = "X-CSRF-Token"
         self.secret_key = settings.secret_key.encode()
         
     def _generate_csrf_token(self) -> str:
@@ -122,15 +122,14 @@ class CSRFDoubleSubmitMiddleware(BaseHTTPMiddleware):
             response.set_cookie(
                 key=self.csrf_cookie_name,
                 value=signed_token,
-                httponly=False,  # Must be accessible to JavaScript
-                secure=not settings.debug,  # HTTPS only in production
+                httponly=True,
+                secure=True,
                 samesite="strict",
-                max_age=3600,    # 1 hour
-                path="/"
+                max_age=3600,
             )
             
-            # Also add to response headers for easier access
             response.headers["X-CSRF-Token"] = csrf_token
+            response.headers["Access-Control-Expose-Headers"] = "X-CSRF-Token"
         
         return response
 

@@ -1,4 +1,4 @@
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Cookie
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 
@@ -22,15 +22,26 @@ def get_user_service(db: Session = Depends(get_db)) -> UserService:
     return UserService(db)
 
 
+async def get_token_from_cookie(taskito_access_token: str | None = Cookie(default=None, alias="taskito_access_token")):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    if taskito_access_token is None:
+        raise credentials_exception
+    return taskito_access_token
+
+
 async def get_current_user(
-    token: str = Depends(oauth2_scheme),
+    token: str = Depends(get_token_from_cookie),
     user_service: UserService = Depends(get_user_service)
 ) -> User:
     """
     Get the current authenticated user from JWT token.
     
     Args:
-        token: JWT token from Authorization header
+        token: JWT token from cookie
         user_service: UserService instance
         
     Returns:

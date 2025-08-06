@@ -96,7 +96,7 @@ class TaskService:
             logging.error(f"Error retrieving tasks: {e}")
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
-    def create_task(self, task_data: TaskCreate, user_id: int) -> Task:
+    def create_task(self, task_data: TaskCreate, user_id: int):
         """
         Create a new task.
         

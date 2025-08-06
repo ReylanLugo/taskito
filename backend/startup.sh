@@ -14,4 +14,4 @@ alembic upgrade head
 
 # Start the application
 echo "Starting application..."
-uvicorn main:app --host 0.0.0.0 --port $API_PORT
+uvicorn main:app --host 0.0.0.0 --port $API_PORT --proxy-headers

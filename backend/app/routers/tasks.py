@@ -1,5 +1,6 @@
 import logging
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from typing import Optional
 from datetime import datetime
@@ -7,7 +8,7 @@ import math
 
 from ..database import get_db
 from ..schemas.task import (
-    Task, TaskCreate, TaskUpdate, TaskResponse, TaskStatistics, 
+    Task, TaskCreate, TaskResponse, TaskUpdate, TasksResponse, TaskStatistics, 
     TaskFilter, Comment, CommentCreate
 )
 from ..models.task import TaskPriority
@@ -33,7 +34,7 @@ def get_task_service(db: Session = Depends(get_db)) -> TaskService:
     return TaskService(db)
 
 
-@router.get("/", response_model=TaskResponse)
+@router.get("/", response_model=TasksResponse)
 @limiter.limit(f"{settings.rate_limit_requests}/{settings.rate_limit_window}")
 async def read_tasks(
     request: Request,
@@ -118,13 +119,15 @@ async def read_tasks(
     
     pages = math.ceil(total / size) if total > 0 else 1
     logging.info(f"/tasks GET: {total} tasks, {pages} pages, {size} tasks per page")
-    return TaskResponse(
+    response = TasksResponse(
         tasks=tasks,
         total=total,
         page=page,
         size=size,
         pages=pages
     )
+
+    return JSONResponse(content=response.model_dump(mode="json", exclude_none=True))
 
 
 @router.get("/statistics", response_model=TaskStatistics)
@@ -149,7 +152,7 @@ async def read_task_statistics(
     return statistics
 
 
-@router.post("/", response_model=Task, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=TaskResponse)
 @limiter.limit(f"{settings.rate_limit_requests}/{settings.rate_limit_window}")
 async def create_new_task(
     request: Request,
@@ -169,7 +172,7 @@ async def create_new_task(
     try:
         db_task = task_service.create_task(task_data=task, user_id=current_user.id)
         logging.info(f"/tasks POST Task created successfully with id {db_task.id}")
-        return db_task
+        return JSONResponse(status_code=status.HTTP_201_CREATED, content=TaskResponse.model_validate(db_task).model_dump(mode="json", exclude_none=True))
     except Exception as e:
         logging.error(f"/tasks POST Error creating task: {e}")
         raise HTTPException(

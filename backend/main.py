@@ -21,7 +21,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 load_dotenv()
 setup_logging()
 
-app = FastAPI(title="Taskito API", description="A simple API for Taskito")
+app = FastAPI(title="Taskito API", description="A simple API for Taskito", root_path="/api")
 
 # Add rate limiting state and error handler
 app.state.limiter = limiter
@@ -36,7 +36,8 @@ app.add_middleware(
     allow_origins=settings.CORS_ALLOW_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["X-CSRF-Token", "Content-Type"],
+    allow_headers=["X-CSRF-Token", "Content-Type", "Authorization"],
+    expose_headers=["X-CSRF-Token", "Content-Type", "Authorization", "Server", "x-ratelimit-limit", "x-ratelimit-remaining", "x-ratelimit-reset"],
 )
 
 # Add security headers middleware
@@ -79,4 +80,4 @@ async def health_check(request: Request):
 if __name__ == "__main__":
     import uvicorn
     port = int(os.getenv("API_PORT", 8000))
-    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True, proxy_headers=True)

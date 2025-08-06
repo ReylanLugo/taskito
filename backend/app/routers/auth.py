@@ -1,6 +1,7 @@
 from datetime import timedelta
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Response
 from fastapi.security import OAuth2PasswordRequestForm
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -20,7 +21,7 @@ import logging
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
 
-@router.post("/register", response_model=User, status_code=status.HTTP_201_CREATED)
+@router.post("/register", status_code=status.HTTP_201_CREATED)
 @limiter.limit(f"{settings.rate_limit_auth_requests}/{settings.rate_limit_auth_window}")
 async def register(
     request: Request,
@@ -49,7 +50,9 @@ async def register(
             detail="Email already registered"
         )
     
-    return user_service.create_user(user_data=user)
+    user = user_service.create_user(user_data=user)
+    logging.info(f"User registered ({user})")
+    return JSONResponse(status_code=status.HTTP_201_CREATED, content="User registered successfully")
 
 
 @router.post("/token", response_model=Token)
@@ -85,7 +88,32 @@ async def login_for_access_token(
         expires_delta=access_token_expires
     )
     
-    return {"access_token": access_token, "token_type": "bearer"}
+    refresh_token_expires = timedelta(minutes=settings.refresh_token_expire_minutes)
+    refresh_token = user_service.create_refresh_token(
+        data={"sub": user.username},
+        expires_delta=refresh_token_expires
+    )
+    
+    response = JSONResponse(status_code=status.HTTP_200_OK, content={"message": "Login successful"})
+    response.set_cookie(
+        key="taskito_access_token",
+        value=access_token,
+        httponly=True,
+        secure=True,
+        samesite="strict",
+        max_age=int(access_token_expires.total_seconds()),
+        path="/"
+    )
+    response.set_cookie(
+        key="taskito_refresh_token",
+        value=refresh_token,
+        httponly=True,
+        secure=True,
+        samesite="strict",
+        max_age=int(refresh_token_expires.total_seconds()),
+        path="/api/auth/refresh"
+    )
+    return response
 
 
 @router.post("/login", response_model=Token)
@@ -120,18 +148,86 @@ async def login_with_json(
         expires_delta=access_token_expires
     )
     
-    return {"access_token": access_token, "token_type": "bearer"}
+    refresh_token_expires = timedelta(minutes=settings.refresh_token_expire_minutes)
+    refresh_token = user_service.create_refresh_token(
+        data={"sub": user.username},
+        expires_delta=refresh_token_expires
+    )
+    
+    response = JSONResponse(status_code=status.HTTP_200_OK, content={"message": "Login successful"})
+    response.set_cookie(
+        key="taskito_access_token",
+        value=access_token,
+        httponly=True,
+        secure=True,
+        samesite="strict",
+        max_age=int(access_token_expires.total_seconds()),
+        path="/"
+    )
+    response.set_cookie(
+        key="taskito_refresh_token",
+        value=refresh_token,
+        httponly=True,
+        secure=True,
+        samesite="strict",
+        max_age=int(refresh_token_expires.total_seconds()),
+        path="/api/auth/refresh"
+    )
+    return response
+
+
+@router.post("/refresh", response_model=Token)
+@limiter.limit(f"{settings.rate_limit_auth_requests}/{settings.rate_limit_auth_window}")
+async def refresh_token(
+    request: Request,
+    user_service: UserService = Depends(get_user_service)
+):
+    """
+    Refresh access token using a valid refresh token.
+    
+    - **refresh_token**: Valid refresh token in cookie
+    """
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    
+    refresh_token = request.cookies.get("taskito_refresh_token")
+    if not refresh_token:
+        raise credentials_exception
+    
+    token_data = user_service.verify_refresh_token(refresh_token)
+    if token_data is None:
+        raise credentials_exception
+    
+    user = user_service.get_user_by_username(token_data.username)
+    if user is None or not user.is_active:
+        raise credentials_exception
+    
+    access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
+    access_token = user_service.create_access_token(
+        data={"sub": user.username}, 
+        expires_delta=access_token_expires
+    )
+    
+    response = JSONResponse(
+        status_code=status.HTTP_200_OK, 
+        content={"access_token": access_token, "token_type": "bearer"}
+    )
+    return response
 
 
 @router.get("/me", response_model=User)
 @limiter.limit(f"{settings.rate_limit_auth_requests}/{settings.rate_limit_auth_window}")
-async def read_users_me(request: Request, current_user: User = Depends(get_current_active_user)) -> User:
+async def read_users_me(request: Request, current_user: User = Depends(get_current_active_user)):
     """
     Get current user information.
     
     Returns the profile information of the currently authenticated user.
     """
-    return current_user
+    user_data = User.model_validate(current_user).model_dump(mode='json')
+    return JSONResponse(status_code=status.HTTP_200_OK, content={"user": user_data})
 
 
 @router.put("/me", response_model=User)
@@ -183,7 +279,8 @@ async def update_user_profile(
             detail="User not found"
         )
     
-    return updated_user
+    user_data = User.model_validate(updated_user).model_dump(mode='json')
+    return JSONResponse(status_code=status.HTTP_200_OK, content={"user": user_data})
 
 
 @router.put("/me/password")
@@ -207,7 +304,7 @@ async def change_password(
             detail="Current password is incorrect"
         )
     
-    return {"message": "Password updated successfully"}
+    return JSONResponse(status_code=status.HTTP_200_OK, content={"message": "Password updated successfully"})
 
 
 @router.put("/users/{user_id}/deactivate")
@@ -237,7 +334,7 @@ async def deactivate_user(
                 detail="User not found"
             )
         
-        return {"message": "User deactivated successfully"}
+        return JSONResponse(status_code=status.HTTP_200_OK, content={"message": "User deactivated successfully"})
     except HTTPException:
         raise
     except Exception as e:
@@ -272,9 +369,25 @@ async def activate_user(
                 detail="User not found"
             )
         
-        return {"message": "User activated successfully"}
+        return JSONResponse(status_code=status.HTTP_200_OK, content={"message": "User activated successfully"})
     except HTTPException:
         raise
     except Exception as e:
         logging.error(f"Error activating user {user_id}: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+@router.post("/logout")
+async def logout_user(
+    response: Response
+):
+    """
+    Logout user by clearing access and refresh token cookies.
+    """
+    # Clear access token cookie
+    response.delete_cookie("taskito_access_token", path="/")
+    
+    # Clear refresh token cookie
+    response.delete_cookie("taskito_refresh_token", path="/api/auth/refresh")
+    
+    return {"message": "Logout successful"}

@@ -81,6 +81,11 @@ class Task(TaskBase):
     model_config = ConfigDict(from_attributes=True, extra='ignore')
 
 
+class TaskResponse(Task):
+    """Schema for task response"""
+    pass
+
+
 class TaskStatistics(BaseModel):
     """Schema for task statistics"""
     total_tasks: int = Field(..., ge=0, description="Total number of tasks")
@@ -103,7 +108,7 @@ class TaskFilter(BaseModel):
     search: Optional[str] = Field(None, max_length=100, description="Search in title and description")
 
 
-class TaskResponse(BaseModel):
+class TasksResponse(BaseModel):
     """Schema for paginated task response"""
     tasks: List[Task] = Field(..., description="List of tasks")
     total: int = Field(..., ge=0, description="Total number of tasks matching filters")

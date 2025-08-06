@@ -51,7 +51,7 @@ class UserService:
 
         return user
 
-    def get_user_by_username(self, username: str) -> Optional[User]:
+    def get_user_by_username(self, username: str | None = None) -> Optional[User]:
         """
         Retrieve a user by their username.
         
@@ -62,6 +62,9 @@ class UserService:
             User object if found, None otherwise
         """
         try:
+            if username is None:
+                return None
+            
             user: Optional[User] = self.db.query(User).filter(User.username == username.lower()).first()
             if not user:
                 logging.error(f"User not found (username={username})")
@@ -292,6 +295,30 @@ class UserService:
             logging.error(f"Error creating access token: {e}")
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
+    def create_refresh_token(self, data: dict, expires_delta: Optional[timedelta] = None) -> str:
+        """
+        Create a JWT refresh token.
+        
+        Args:
+            data: Data to encode in the token
+            expires_delta: Token expiration time
+            
+        Returns:
+            Encoded JWT refresh token
+        """
+        try:
+            to_encode = data.copy()
+            if expires_delta:
+                expire = datetime.utcnow() + expires_delta
+            else:
+                expire = datetime.utcnow() + timedelta(minutes=settings.refresh_token_expire_minutes)
+            to_encode.update({"exp": expire, "type": "refresh"})
+            encoded_jwt = jwt.encode(to_encode, settings.refresh_token_secret, algorithm=settings.algorithm)
+            return encoded_jwt
+        except Exception as e:
+            logging.error(f"Error creating refresh token: {e}")
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
     def verify_token(self, token: str) -> Optional[TokenData]:
         """
         Verify and decode a JWT token.
@@ -319,6 +346,41 @@ class UserService:
             return None
         except Exception as e:
             logging.error(f"Error verifying token (token={token}): {e}")
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+    def verify_refresh_token(self, token: str) -> Optional[TokenData]:
+        """
+        Verify and decode a JWT refresh token.
+        
+        Args:
+            token: JWT refresh token to verify
+            
+        Returns:
+            TokenData if valid, None otherwise
+        """
+        try:
+            payload = jwt.decode(
+                token,
+                settings.refresh_token_secret,
+                algorithms=[settings.algorithm]
+            )
+            if payload.get("type") != "refresh":
+                logging.error(f"Invalid token type: expected refresh token (token={token})")
+                return None
+            
+            if payload.get("sub") is None:
+                logging.error(f"Invalid token payload: 'sub' is missing (token={token})")
+                return None
+            
+            username: str = str(payload.get("sub"))
+            
+            logging.info(f"Refresh token verified (username={username})")
+            return TokenData(username=username)
+        except JWTError:
+            logging.error(f"Invalid refresh token (token={token})")
+            return None
+        except Exception as e:
+            logging.error(f"Error verifying refresh token (token={token}): {e}")
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
     def is_username_available(self, username: str, exclude_user_id: Optional[int] = None) -> bool:

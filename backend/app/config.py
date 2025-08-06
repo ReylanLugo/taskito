@@ -24,7 +24,9 @@ class Settings(BaseSettings):
     debug: bool = True
     secret_key: str = "default_secret_key"
     algorithm: str = "HS256"
+    refresh_token_secret: str = "your_refresh_token_secret"
     access_token_expire_minutes: int = 30
+    refresh_token_expire_minutes: int = 60 * 24 * 7  # 7 days
 
     # Rate limiting settings
     rate_limit_enabled: bool = True
@@ -34,7 +36,7 @@ class Settings(BaseSettings):
     rate_limit_auth_window: str = "minutes"
 
     # CORS settings
-    CORS_ALLOW_ORIGINS: List[str] = []
+    CORS_ALLOW_ORIGINS: List[str] = ["http://localhost:3000", "https://localhost:3000", "http://localhost", "https://localhost"]
 
     model_config = SettingsConfigDict(
         env_file=".env.local", env_file_encoding="utf-8", case_sensitive=False
