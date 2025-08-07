@@ -1,6 +1,6 @@
 from fastapi import status
 from fastapi.exceptions import HTTPException
-from typing import Optional, cast
+from typing import List, Optional, cast
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
@@ -95,6 +95,21 @@ class UserService:
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
         return user
+    
+    def get_all_users(self) -> List[User]:
+        """
+        Retrieve all users.
+        
+        Returns:
+            List of User objects
+        """
+        try:
+            users = self.db.query(User).all()
+        except Exception as e:
+            logging.error(f"Error retrieving all users: {e}")
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+        return users
 
     def create_user(self, user_data: UserCreate) -> User:
         """

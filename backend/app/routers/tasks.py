@@ -149,7 +149,7 @@ async def read_task_statistics(
     """
     statistics = task_service.get_task_statistics()
     logging.info(f"/tasks/statistics GET Retrieved task statistics")
-    return statistics
+    return JSONResponse(status_code=status.HTTP_200_OK, content=TaskStatistics.model_validate(statistics).model_dump(mode="json", exclude_none=True))
 
 
 @router.post("/", response_model=TaskResponse)
@@ -249,7 +249,7 @@ async def update_existing_task(
             detail="Task not found"
         )
     logging.info(f"/tasks/{task_id} PUT Task updated successfully")
-    return updated_task
+    return JSONResponse(status_code=status.HTTP_200_OK, content=TaskResponse.model_validate(updated_task).model_dump(mode="json", exclude_none=True))
 
 
 @router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -291,6 +291,7 @@ async def delete_existing_task(
             detail="Task not found"
         )
     logging.info(f"/tasks/{task_id} DELETE Task deleted successfully")
+    return JSONResponse(status_code=status.HTTP_204_NO_CONTENT, content={})
 
 
 @router.post("/{task_id}/comments", response_model=Comment, status_code=status.HTTP_201_CREATED)
@@ -323,7 +324,7 @@ async def add_comment_to_task(
             user_id=current_user.id
         )
         logging.info(f"/tasks/{task_id}/comments POST Comment added successfully")
-        return comment
+        return JSONResponse(status_code=status.HTTP_201_CREATED, content=Comment.model_validate(comment).model_dump(mode="json", exclude_none=True))
     except Exception as e:
         logging.error(f"/tasks/{task_id}/comments POST Error adding comment to task {task_id}: {e}")
         raise HTTPException(

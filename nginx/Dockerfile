@@ -73,6 +73,7 @@ RUN echo "      proxy_pass_request_headers on;" >> /etc/nginx/nginx.conf
 RUN echo "      # Preserve frontend response headers" >> /etc/nginx/nginx.conf
 RUN echo "      proxy_pass_header Server;" >> /etc/nginx/nginx.conf
 RUN echo "      proxy_pass_header Content-Type;" >> /etc/nginx/nginx.conf
+RUN echo "      proxy_pass_header X-CSRF-Token;" >> /etc/nginx/nginx.conf
 RUN echo "      # Add CORS headers for frontend" >> /etc/nginx/nginx.conf
 RUN echo "      add_header Access-Control-Allow-Origin '*' always;" >> /etc/nginx/nginx.conf
 RUN echo "      add_header Access-Control-Expose-Headers 'X-CSRF-Token, Content-Type, Authorization, Server, x-ratelimit-limit, x-ratelimit-remaining, x-ratelimit-reset' always;" >> /etc/nginx/nginx.conf

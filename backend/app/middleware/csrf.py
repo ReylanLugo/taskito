@@ -78,13 +78,12 @@ class CSRFDoubleSubmitMiddleware(BaseHTTPMiddleware):
 
     def _should_set_csrf(self, request: Request) -> bool:
         """Determine if CSRF token should be set in response"""
-        auth_header = request.headers.get("Authorization")
+        auth_cookie = request.cookies.get("taskito_access_token")
         return bool(
             request.method == "GET" 
             and not request.url.path.startswith("/auth/")
             and not request.url.path.startswith("/csrf/")
-            and auth_header is not None
-            and auth_header.startswith("Bearer ")
+            and auth_cookie is not None
         )
     
     async def dispatch(self, request: Request, call_next):

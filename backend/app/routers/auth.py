@@ -171,7 +171,7 @@ async def login_with_json(
         secure=True,
         samesite="strict",
         max_age=int(refresh_token_expires.total_seconds()),
-        path="/api/auth/refresh"
+        path="/"
     )
     return response
 
@@ -281,6 +281,20 @@ async def update_user_profile(
     
     user_data = User.model_validate(updated_user).model_dump(mode='json')
     return JSONResponse(status_code=status.HTTP_200_OK, content={"user": user_data})
+
+@router.get("/users")
+@limiter.limit(f"{settings.rate_limit_auth_requests}/{settings.rate_limit_auth_window}")
+async def read_users(
+    request: Request,
+    current_user: User = Depends(get_current_active_user),
+    user_service: UserService = Depends(get_user_service)
+):
+    """
+    Get all users.
+    """
+    users = user_service.get_all_users()
+    user_data = [User.model_validate(user).model_dump(mode='json') for user in users]
+    return JSONResponse(status_code=status.HTTP_200_OK, content={"users": user_data})
 
 
 @router.put("/me/password")
