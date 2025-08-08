@@ -39,14 +39,4 @@ export default defineConfig({
       return config;
     },
   },
-
-  e2e: {
-    baseUrl: 'https://localhost',
-    setupNodeEvents(on, config) {
-      // Enable code coverage task for e2e as well
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      require('@cypress/code-coverage/task')(on, config);
-      return config;
-    },
-  },
 });

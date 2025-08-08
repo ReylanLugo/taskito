@@ -74,7 +74,7 @@ export default function TaskDetails({
             <div className="flex items-center gap-2 justify-between">
               <span className="flex items-center gap-2">
                 {task.assigned_to &&
-                  (usersState.users.find((user) => user.id === task.assigned_to)
+                  (usersState.users?.find((user) => user.id === task.assigned_to)
                     ?.username ??
                     "Unknown")}
                 <PriorityLabel priority={task.priority} />
