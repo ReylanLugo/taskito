@@ -33,7 +33,7 @@ Rutas rápidas:
 - Frontend: https://localhost/
 - API: https://localhost/api
 - Healthcheck: https://localhost/api/health
-- Grafana: https://localhost/grafana/ (user: `admin`, pass: `admin`)
+- Grafana: http://localhost:3000/d/taskito-logs/taskito-logs?orgId=1&from=now-1h&to=now&timezone=browser (user: `admin`, pass: `admin`)
 
 ### 1) Requisitos previos (Windows)
 - Docker Desktop (con WSL2 habilitado)
