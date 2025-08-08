@@ -258,3 +258,44 @@ docker compose down -v       # Parar y borrar volúmenes (pierdes datos de Postg
             └──────────────────────────────┘
 
 
+
+
+## Conclusiones y próximos pasos
+
+Estado actual:
+- Backend (FastAPI) con autenticación JWT, validaciones sólidas y rate limiting (auth vs general).
+- Base de datos PostgreSQL y Redis disponibles en Compose.
+- Frontend funcionando detrás de Nginx con HTTPS en desarrollo, integración con API y documentación de Swagger protegida por políticas CSP.
+- Observabilidad básica con Loki + Grafana.
+
+Próximos pasos propuestos:
+
+1) Notificaciones de tareas próximas a vencerse (background jobs)
+- Objetivo: alertar a usuarios cuando una tarea esté por vencer (por ejemplo, 24h/1h antes) y cuando se venza.
+- Tecnologías: Celery (workers) + Redis (broker y opcionalmente backend de resultados) + Celery Beat (scheduler).
+- Acciones:
+  - Añadir servicios al `docker-compose.yml`: `celery-worker` y `celery-beat` que apunten al mismo código del backend y compartan `.env`.
+  - Definir tareas en `backend/app/tasks/notifications.py` (ej.: `send_due_soon_notifications`, `send_overdue_notifications`).
+  - Programar jobs en Celery Beat (crontab o interval) para revisar tareas con `due_date` cercano y emitir notificaciones (email, WebSocket, o push interno).
+  - Exponer configuración (ventanas de aviso, plantillas de mensaje) en `config.py` y variables de entorno.
+  - Registrar métricas y logs de ejecución para auditoría (ej.: cuántas notificaciones enviadas, errores, reintentos).
+
+2) SSR con Next.js y ajuste de Nginx
+- Objetivo: migrar el frontend a SSR con Next.js (App Router), mejorando SEO, performance inicial y rutas dinámicas.
+- Acciones:
+  - Migrar el frontend a Next.js (si no está completo) y unificar entorno en puerto 3000.
+  - Actualizar `frontend/Dockerfile` para producción SSR (build + start) y development según necesidad.
+  - Refactorizar `nginx` para:
+    - Proxyear `/` al SSR de Next.js (puerto 3000), `/api` al backend (puerto 8000) y `/ws` si aplica.
+    - Habilitar HTTP/2, gzip/brotli, cache estático agresivo para `_next/static` y headers de seguridad.
+    - Mantener compatibilidad con CSP (actualizar hashes si se inyecta JS en Swagger/NextAuth).
+
+Checklist sugerido:
+- [ ] Añadir `celery[redis]` al `requirements.txt` y crear módulo `app/celery.py` con la instancia.
+- [ ] Crear `celery-worker` y `celery-beat` en `docker-compose.yml` con healthchecks.
+- [ ] Implementar tareas de notificación y pruebas de integración (fixtures con Redis y DB).
+- [ ] Añadir endpoints/flags para activar/desactivar notificaciones por usuario.
+- [ ] Migrar frontend a Next.js SSR y ajustar variables (`NEXTAUTH_URL`, `NEXT_PUBLIC_*`).
+- [ ] Refactor de `nginx.conf` para enrutar SSR/estático/API/WS con compresión y caché adecuados.
+- [ ] Actualizar documentación (README) y diagramas.
+
