@@ -198,12 +198,13 @@ docker compose down -v       # Parar y borrar volúmenes (pierdes datos de Postg
 - Observabilidad: Grafana + Loki + Promtail.
 
 ## Diagrama de arquitectura
-                                   ┌──────────────────────────┐
-                                   │        Usuario           │
-                                   │   Navegador(NextJs/Redux)│
-                                   └───────────┬──────────────┘
-                                               │ HTTP(S)
-                                               │
+```text
+                                    ┌──────────────────────────┐
+                                    │        Usuario           │
+                                    │   Navegador(NextJs/Redux)│
+                                    └───────────┬──────────────┘
+                                                │ HTTP(S)
+                                                │
 ┌──────────────────────────┐        ┌──────────▼───────────┐
 │   Contenedor: nginx      │        │  Contenedor: frontend │
 │ Reverse Proxy / Static   │        │  (App Router)         │
@@ -256,9 +257,7 @@ docker compose down -v       # Parar y borrar volúmenes (pierdes datos de Postg
             │ Contenedor: monitoring/logs  │
             │ (Loki/Grafana)               │
             └──────────────────────────────┘
-
-
-
+```
 
 ## Conclusiones y próximos pasos
 
