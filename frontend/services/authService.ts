@@ -6,6 +6,7 @@ import { useAppSelector } from "@/lib/store/hooks";
 import { AppDispatch, RootState } from "@/lib/store";
 import { useAppDispatch } from "@/lib/store/hooks";
 import { setUser } from "@/lib/store/slices/auth";
+import { Role } from "@/types/User";
 
 /**
  * Service class for authenticating users.
@@ -46,8 +47,11 @@ class AuthService {
       return response.data;
     } catch (error) {
       console.error("Error logging in:", error);
-      const errorMessage = (error as AxiosError<{ detail?: string }>).response
-        ?.data?.detail;
+      const errorMessage =
+        (error as AxiosError<{ detail?: string; error?: string }>).response
+          ?.data?.detail ||
+        (error as AxiosError<{ detail?: string; error?: string }>).response
+          ?.data?.error;
       toast.error(
         errorMessage || "An unexpected error occurred. Please try again."
       );
@@ -67,8 +71,11 @@ class AuthService {
       return response.data.user;
     } catch (error) {
       console.error("Error getting user:", error);
-      const errorMessage = (error as AxiosError<{ detail?: string }>).response
-        ?.data?.detail;
+      const errorMessage =
+        (error as AxiosError<{ detail?: string; error?: string }>).response
+          ?.data?.detail ||
+        (error as AxiosError<{ detail?: string; error?: string }>).response
+          ?.data?.error;
       toast.error(
         errorMessage || "An unexpected error occurred. Please try again."
       );
@@ -77,12 +84,12 @@ class AuthService {
 
   /**
    * Register a new user, automatically log them in, and retrieve their information.
-   * 
+   *
    * This method performs the following steps:
    * 1. Registers the user with the provided credentials.
    * 2. Logs the user in using their username and password.
    * 3. Retrieves the current user's information.
-   * 
+   *
    * @param user - The user's registration details.
    * @returns The HTTP status code from the registration response.
    * @throws AxiosError if there was an error during registration, login, or retrieving user data.
@@ -101,11 +108,77 @@ class AuthService {
       return response.status;
     } catch (error) {
       console.error("Error registering user:", error);
-      const errorMessage = (error as AxiosError<{ detail?: string }>).response
-        ?.data?.detail;
+      const errorMessage =
+        (error as AxiosError<{ detail?: string; error?: string }>).response
+          ?.data?.detail ||
+        (error as AxiosError<{ detail?: string; error?: string }>).response
+          ?.data?.error;
       toast.error(
         errorMessage || "An unexpected error occurred. Please try again."
       );
+    }
+  }
+
+  /**
+   * Log out the current user by clearing local state and making a backend request.
+   *
+   * This function performs several tasks to ensure a complete logout process:
+   * 1. Marks logout in progress by setting a session storage item.
+   * 2. Clears locally persisted CSRF token from localStorage.
+   * 3. Optimistically clears the user state in the application's auth store.
+   * 4. Sends a request to the backend to clear authentication cookies.
+   * 5. Forces a hard redirect to the homepage to clear in-memory state and abort in-flight requests.
+   * 
+   * In case of an error during the logout process, it logs the error and shows a toast message.
+   * It ensures a redirect to the homepage even if an error occurs, to avoid leaving the app in a half-logged state.
+   */
+  async logout() {
+    try {
+      // Mark logout in progress for interceptors (short TTL handled there)
+      try {
+        sessionStorage.setItem("logoutInProgressAt", String(Date.now()));
+      } catch {}
+
+      // Clear CSRF token persisted locally so subsequent requests don't attach it
+      try {
+        localStorage.removeItem("csrfToken");
+      } catch {}
+
+      // Optimistically clear user state immediately
+      this.setAuthStore(
+        setUser({
+          id: 0,
+          username: "",
+          email: "",
+          role: Role.USER,
+          is_active: false,
+          updated_at: "",
+          created_at: "",
+          csrfToken: "",
+        })
+      );
+
+      // Request backend to clear cookies
+      await this.api.post("/auth/logout");
+
+      // Force a hard redirect to clear any in-memory state and abort in-flight requests
+      if (typeof window !== "undefined") {
+        window.location.replace("/");
+      }
+    } catch (error) {
+      console.error("Error logging out:", error);
+      const errorMessage =
+        (error as AxiosError<{ detail?: string; error?: string }>).response
+          ?.data?.detail ||
+        (error as AxiosError<{ detail?: string; error?: string }>).response
+          ?.data?.error;
+      toast.error(
+        errorMessage || "An unexpected error occurred. Please try again."
+      );
+      // Fallback redirect even on error to avoid leaving the app in a half-logged state
+      if (typeof window !== "undefined") {
+        window.location.replace("/");
+      }
     }
   }
 }

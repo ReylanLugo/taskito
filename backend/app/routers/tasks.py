@@ -1,5 +1,5 @@
 import logging
-from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Request, Response
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from typing import Optional
@@ -291,7 +291,8 @@ async def delete_existing_task(
             detail="Task not found"
         )
     logging.info(f"/tasks/{task_id} DELETE Task deleted successfully")
-    return JSONResponse(status_code=status.HTTP_204_NO_CONTENT, content={})
+    # 204 No Content must not include a body; return an empty Response
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.post("/{task_id}/comments", response_model=Comment, status_code=status.HTTP_201_CREATED)

@@ -19,7 +19,7 @@ export default function Error({ onRetry }: ErrorProps) {
         Something went wrong!
       </h2>
       <button
-        className="px-4 py-2 bg-slate-500 text-black rounded hover:bg-slate-700"
+        className="px-4 py-2 bg-slate-800 text-white rounded hover:bg-slate-700"
         onClick={handleRetry}
       >
         Try again

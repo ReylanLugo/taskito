@@ -46,7 +46,7 @@ export default function TaskDetails({
   return (
     <Dialog>
       <DialogTrigger>{children}</DialogTrigger>
-      <DialogContent className="md:max-w-[800px] max-w-[400px] md:w-[800px] w-full">
+      <DialogContent data-testid="task-details-dialog" className="md:max-w-[800px] max-w-[400px] md:w-[800px] w-full">
         <DialogHeader>
           <DialogTitle className="text-base">Task Details</DialogTitle>
         </DialogHeader>

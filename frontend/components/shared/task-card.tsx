@@ -39,7 +39,10 @@ export const TaskCard = ({
               data-testid="delete-task"
               className="cursor-pointer"
               variant="ghost"
-              onClick={() => deleteTask(task.id)}
+              onClick={(e) => {
+                e.stopPropagation();
+                deleteTask(task.id);
+              }}
             >
               <Trash className="h-4 w-4 text-red-500" />
             </Button>
@@ -56,7 +59,11 @@ export const TaskCard = ({
       </CardContent>
       <CardFooter>
         {task.completed ? (
-          <Button data-testid="completed-indicator" className="text-sm w-full py-6" variant="success">
+          <Button
+            data-testid="completed-indicator"
+            className="text-sm w-full py-6"
+            variant="success"
+          >
             Completed <CheckCircle className="h-4 w-4" />
           </Button>
         ) : (
@@ -64,7 +71,10 @@ export const TaskCard = ({
             data-testid="mark-task-as-completed"
             className="text-sm w-full py-6 text-gray-600"
             variant="outline"
-            onClick={() => markTaskAsCompleted(task.id)}
+            onClick={(e) => {
+              e.stopPropagation();
+              markTaskAsCompleted(task.id);
+            }}
           >
             Mark as completed <CheckLine className="h-4 w-4 text-green-500" />
           </Button>

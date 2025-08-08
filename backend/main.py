@@ -11,6 +11,7 @@ from app.loki_handler import setup_logging
 from app.routers import tasks
 from app.routers import auth
 from app.routers import csrf
+from app.routers import users
 from app.schemas.main import HealthCheckResponse
 from app.middleware import limiter, SecurityHeadersMiddleware, CSRFDoubleSubmitMiddleware
 from app.config import settings
@@ -50,6 +51,7 @@ app.add_middleware(CSRFDoubleSubmitMiddleware)
 app.include_router(tasks.router)
 app.include_router(auth.router)
 app.include_router(csrf.router)
+app.include_router(users.router)
 
 
 @app.get("/", tags=["Root"])

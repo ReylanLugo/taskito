@@ -8,6 +8,7 @@ import usersReducer from "@/lib/store/slices/users";
 import { Toaster } from "@/components/ui/sonner";
 import AuthService from "@/services/authService";
 import { AppStore } from "@/lib/store";
+import { Role } from "@/types/User";
 
 // Harness component to safely use hooks inside services
 const ServiceHarness: React.FC<{
@@ -144,6 +145,89 @@ describe("AuthService", () => {
     cy.wait(["@register", "@login", "@me"]).then(() => {
       const state = store.getState();
       expect(state.auth.username).to.eq("neo");
+    });
+  });
+
+  it("getUser error shows toast", () => {
+    const api = axios.create({ baseURL: "/api" });
+    const store = makeStore();
+
+    cy.intercept("GET", "/api/auth/me", { statusCode: 500, body: { detail: "cannot fetch" } }).as("meFail");
+
+    mountWithProviders(
+      <ServiceHarness
+        api={api}
+        store={store}
+        run={async ({ service }) => {
+          await service.getUser();
+        }}
+      />,
+      store
+    );
+
+    cy.wait(["@meFail"]).then(() => {
+      cy.get("[data-sonner-toast]").contains("cannot fetch").should("exist");
+    });
+  });
+
+  it("register error shows toast and does not set user", () => {
+    const api = axios.create({ baseURL: "/api" });
+    const store = makeStore();
+
+    cy.intercept("POST", "/api/auth/register", { statusCode: 400, body: { detail: "username taken" } }).as("registerFail");
+
+    mountWithProviders(
+      <ServiceHarness
+        api={api}
+        store={store}
+        run={async ({ service }) => {
+          await service.register({ username: "neo", password: "x", email: "n@e.co", role: "user" } as any);
+        }}
+      />,
+      store
+    );
+
+    cy.wait(["@registerFail"]).then(() => {
+      cy.get("[data-sonner-toast]").contains("username taken").should("exist");
+      const state = store.getState();
+      expect(state.auth.username).to.eq("");
+    });
+  });
+
+  it("logout success clears user", () => {
+    const api = axios.create({ baseURL: "/api" });
+    const store = makeStore();
+
+    // Seed a logged-in user
+    store.dispatch(
+      setUser({
+        id: 1,
+        username: "john",
+        email: "j@x.co",
+        is_active: true,
+        role: Role.USER,
+        updated_at: "",
+        created_at: "",
+        csrfToken: "",
+      } as any)
+    );
+
+    cy.intercept("POST", "**/auth/logout", { statusCode: 200, body: {} }).as("logout");
+
+    mountWithProviders(
+      <ServiceHarness
+        api={api}
+        store={store}
+        run={async ({ service }) => {
+          await service.logout();
+        }}
+      />,
+      store
+    );
+
+    cy.wait(["@logout"]).then(() => {
+      const state = store.getState();
+      expect(state.auth.username).to.eq("");
     });
   });
 });

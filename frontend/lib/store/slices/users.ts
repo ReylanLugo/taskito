@@ -16,8 +16,16 @@ export const usersSlice = createSlice({
     setUsers: (state, action: PayloadAction<User[]>) => {
       state.users = action.payload;
     },
+    deleteUser: (state, action: PayloadAction<number>) => {
+      state.users = state.users.filter((user) => user.id !== action.payload);
+    },
+    updateUser: (state, action: PayloadAction<User>) => {
+      state.users = state.users.map((user) =>
+        user.id === action.payload.id ? action.payload : user
+      );
+    },
   },
 });
 
-export const { setUsers } = usersSlice.actions;
+export const { setUsers, deleteUser, updateUser } = usersSlice.actions;
 export default usersSlice.reducer;

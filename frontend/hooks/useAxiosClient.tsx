@@ -29,6 +29,10 @@ const useAxiosClient = () => {
         if (csrfToken) {
           console.log(csrfToken);
           dispatch(setCsrfToken(csrfToken));
+          try {
+            // Persist token so request interceptor can read it
+            localStorage.setItem("csrfToken", csrfToken);
+          } catch {}
         }
       }
       return response;
@@ -36,12 +40,35 @@ const useAxiosClient = () => {
     async (error) => {
       const originalRequest = error.config;
 
-      if (error.response.status === 401 && !originalRequest._retry) {
+      if (error.response?.status === 401 && !originalRequest._retry) {
         originalRequest._retry = true;
 
         try {
-          if (!originalRequest.url?.includes("/login")) {
+          const url: string = originalRequest?.url || "";
+          const isAuthOrRefresh =
+            url.includes("/auth/login") ||
+            url.includes("/auth/refresh") ||
+            url.includes("/auth/logout");
+
+          // If a logout is in progress, do NOT attempt to refresh
+          let logoutGuard = false;
+          try {
+            const raw = sessionStorage.getItem("logoutInProgressAt");
+            if (raw) {
+              const ts = parseInt(raw, 10);
+              // Consider logout window valid for 7 seconds
+              if (!Number.isNaN(ts) && Date.now() - ts < 7000) {
+                logoutGuard = true;
+              } else {
+                sessionStorage.removeItem("logoutInProgressAt");
+              }
+            }
+          } catch {}
+
+          // Only attempt refresh if the failing request is not the login or refresh endpoint
+          if (!isAuthOrRefresh && !logoutGuard) {
             const refreshResponse = await axiosClient.post("/auth/refresh");
+            console.log(refreshResponse, "refreshResponse");
           }
           return axiosClient(originalRequest);
         } catch (refreshError) {

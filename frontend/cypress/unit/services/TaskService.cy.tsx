@@ -158,9 +158,28 @@ describe("TaskService", () => {
 
   it("markTaskAsCompleted sets completed in store and returns status", () => {
     const api = axios.create({ baseURL: "/api" });
-    const store = makeStore({ auth: { csrfToken: "x" } });
+    const store = makeStore({ auth: { csrfToken: "x" } } as any);
+    // Preload the task in the slice via dispatch
+    store.dispatch({
+      type: "task/setTasks",
+      payload: [
+        {
+          id: 7,
+          title: "seed",
+          description: "",
+          due_date: "",
+          priority: "baja",
+          assigned_to: 0,
+          created_by: 0,
+          completed: false,
+          comments: [],
+          created_at: "",
+          updated_at: "",
+        },
+      ],
+    });
 
-    cy.intercept("PUT", "/api/tasks/7", { statusCode: 200, body: { id: 7, completed: true } }).as("complete");
+    cy.intercept("PUT", "**/tasks/7", { statusCode: 200, body: { id: 7, completed: true } }).as("complete");
 
     mountWithProviders(
       <ServiceHarness
@@ -175,8 +194,12 @@ describe("TaskService", () => {
     );
 
     cy.wait(["@complete"]).then(() => {
-      const state = store.getState();
-      expect(state.task).to.exist;
+      const state: any = store.getState();
+      const slice = state.task ?? state.tasks;
+      expect(slice).to.exist;
+      const item = slice.tasks.find((t: any) => t.id === 7);
+      expect(item).to.exist;
+      expect(item!.completed).to.eq(true);
     });
   });
 
@@ -460,5 +483,137 @@ describe("TaskService", () => {
     );
 
     cy.wait(["@commentErr"]);
+  });
+
+  it("updateTask includes CSRF header", () => {
+    const api = axios.create({ baseURL: "/api" });
+    const store = makeStore({ auth: { csrfToken: "x" } });
+
+    cy.intercept("PUT", "**/tasks/5", (req) => {
+      const csrf = (req.headers["x-csrf-token"] as any) ?? (req.headers as any)["X-CSRF-Token"];
+      expect(csrf).to.eq("x");
+      const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
+      expect(body).to.include({ title: "hdr" });
+      req.reply({ statusCode: 200, body: { id: 5, title: "hdr" } });
+    }).as("updateCsrf");
+
+    mountWithProviders(
+      <ServiceHarness
+        api={api}
+        store={store}
+        run={async ({ service }) => {
+          const status = await service.updateTask(5, { title: "hdr" } as any);
+          expect(status).to.eq(200);
+        }}
+      />,
+      store
+    );
+
+    cy.wait(["@updateCsrf"]);
+  });
+
+  it("markTaskAsCompleted includes CSRF header and updates store", () => {
+    const api = axios.create({ baseURL: "/api" });
+    const preloaded = {
+      auth: { csrfToken: "x" },
+      task: { tasks: [{ id: 7, title: "t", completed: false }] },
+    };
+    const store = makeStore(preloaded);
+
+    cy.intercept("PUT", "**/tasks/7", (req) => {
+      const csrf = (req.headers["x-csrf-token"] as any) ?? (req.headers as any)["X-CSRF-Token"]; 
+      expect(csrf).to.eq("x");
+      const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
+      expect(body).to.include({ completed: true });
+      req.reply({ statusCode: 200, body: { id: 7, completed: true } });
+    }).as("completeCsrf");
+
+    mountWithProviders(
+      <ServiceHarness
+        api={api}
+        store={store}
+        run={async ({ service }) => {
+          const status = await service.markTaskAsCompleted(7);
+          expect(status).to.eq(200);
+        }}
+      />,
+      store
+    );
+
+    cy.wait(["@completeCsrf"]);
+  });
+
+  it("deleteTask includes CSRF header and removes from store", () => {
+    const api = axios.create({ baseURL: "/api" });
+    const store = makeStore({ auth: { csrfToken: "x" } } as any);
+    // Preload task id 11 so reducer can remove it
+    store.dispatch({
+      type: "task/setTasks",
+      payload: [
+        {
+          id: 11,
+          title: "to-del",
+          description: "",
+          due_date: "",
+          priority: "baja",
+          assigned_to: 0,
+          created_by: 0,
+          completed: false,
+          comments: [],
+          created_at: "",
+          updated_at: "",
+        },
+      ],
+    });
+
+    cy.intercept("DELETE", "**/tasks/11", (req) => {
+      const csrf = (req.headers["x-csrf-token"] as any) ?? (req.headers as any)["X-CSRF-Token"]; 
+      expect(csrf).to.eq("x");
+      req.reply({ statusCode: 204, body: {} });
+    }).as("deleteCsrf");
+
+    mountWithProviders(
+      <ServiceHarness
+        api={api}
+        store={store}
+        run={async ({ service }) => {
+          const status = await service.deleteTask(11);
+          expect(status).to.eq(204);
+        }}
+      />,
+      store
+    );
+
+    cy.wait(["@deleteCsrf"]).then(() => {
+      const state = store.getState();
+      expect(state.task.tasks.find((t: any) => t.id === 11)).to.be.undefined;
+    });
+  });
+
+  it("addComment includes CSRF header", () => {
+    const api = axios.create({ baseURL: "/api" });
+    const store = makeStore({ auth: { csrfToken: "x" } });
+
+    cy.intercept("POST", "**/tasks/22/comments", (req) => {
+      const csrf = (req.headers["x-csrf-token"] as any) ?? (req.headers as any)["X-CSRF-Token"]; 
+      expect(csrf).to.eq("x");
+      const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
+      expect(body).to.include({ content: "hello" });
+      req.reply({ statusCode: 201, body: { id: 1, content: "hello" } });
+    }).as("commentCsrf");
+
+    mountWithProviders(
+      <ServiceHarness
+        api={api}
+        store={store}
+        run={async ({ service }) => {
+          const status = await service.addComment(22, "hello");
+          expect(status).to.eq(201);
+        }}
+      />,
+      store
+    );
+
+    cy.wait(["@commentCsrf"]);
   });
 });

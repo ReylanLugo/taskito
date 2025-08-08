@@ -3,15 +3,13 @@ import React from "react";
 import TasksGrid from "../../components/dashboard/TasksGrid/index";
 import { Provider } from "react-redux";
 import { configureStore } from "@reduxjs/toolkit";
-import tasksReducer, {
-  setPagination,
-  setTasks,
-} from "../../lib/store/slices/tasks";
+import tasksReducer from "../../lib/store/slices/tasks";
 import usersReducer from "../../lib/store/slices/users";
 import { TaskPriority } from "../../types/Tasks";
 import authReducer from "../../lib/store/slices/auth";
 import "@/app/globals.css";
 import { Toaster } from "@/components/ui/sonner";
+import { Role } from "@/types/User";
 
 describe("TasksGrid Component", () => {
   const store = configureStore({
@@ -25,7 +23,7 @@ describe("TasksGrid Component", () => {
         id: 1,
         username: "testuser",
         email: "test@example.com",
-        role: "user",
+        role: Role.USER,
         is_active: true,
         created_at: "2025-08-01T00:00:00Z",
         updated_at: "2025-08-01T00:00:00Z",
@@ -82,7 +80,7 @@ describe("TasksGrid Component", () => {
             id: 1,
             username: "testuser",
             email: "test@example.com",
-            role: "user",
+            role: Role.USER,
             is_active: true,
             created_at: "2025-08-01T00:00:00Z",
             updated_at: "2025-08-01T00:00:00Z",
@@ -326,7 +324,7 @@ describe("TasksGrid Component", () => {
         auth: {
           ...store.getState().auth,
           id: 2, // Different user ID than task creator
-          role: "user",
+          role: Role.USER,
         },
         task: {
           ...store.getState().task,

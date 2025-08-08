@@ -8,6 +8,7 @@ import CreateTaskForm from "@/components/dashboard/TasksGrid/create-task-form";
 import { Toaster } from "@/components/ui/sonner";
 import "@/app/globals.css";
 import { AppStore } from "@/lib/store";
+import { Role } from "@/types/User";
 
 // Helper to mount the component with a basic store state
 const rootReducer = combineReducers({
@@ -24,7 +25,7 @@ const makeStore = (preloaded?: AppStore) =>
         id: 1,
         username: "tester",
         email: "tester@example.com",
-        role: "admin",
+        role: Role.ADMIN,
         is_active: true,
         created_at: "2025-01-01T00:00:00Z",
         updated_at: "2025-01-01T00:00:00Z",
@@ -50,7 +51,7 @@ const makeStore = (preloaded?: AppStore) =>
             id: 1,
             username: "testuser",
             email: "test@example.com",
-            role: "user",
+            role: Role.USER,
             is_active: true,
             created_at: "2025-01-01T00:00:00Z",
             updated_at: "2025-01-01T00:00:00Z",

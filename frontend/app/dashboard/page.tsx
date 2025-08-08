@@ -16,6 +16,9 @@ import Image from "next/image";
 import { useAppDispatch } from "@/lib/store/hooks";
 import { setPagination, setTasks } from "@/lib/store/slices/tasks";
 import AuthService from "@/services/authService";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { LogOut } from "lucide-react";
 const TasksPriorityChart = dynamicImport(
   () =>
     import("@/components/dashboard/tasks-priority-chart").then(
@@ -43,6 +46,7 @@ export default function Dashboard() {
   const usersService = new UsersService(api);
   const auth = useSelector((state: RootState) => state.auth);
   const dispatch = useAppDispatch();
+  const router = useRouter();
 
   useEffect(() => {
     // Fetch statistics
@@ -84,7 +88,7 @@ export default function Dashboard() {
 
     // Fetch auth user if not exists
     if (!auth?.id) {
-      authService.getUser()
+      authService.getUser();
     }
   }, []);
 
@@ -92,11 +96,22 @@ export default function Dashboard() {
     <main className="p-4 max-w-7xl mx-auto">
       <div className="flex justify-between items-center mb-6">
         <Image src="/logo.png" alt="Logo" width={100} height={100} />
+        {auth?.role === "admin" && (
+          <Button onClick={() => router.push("/dashboard/admin")}>Admin</Button>
+        )}
         <div className="flex items-center gap-2">
           <span className="text-xl text-center font-bold bg-gray-400 rounded-full w-12 h-12 flex items-center justify-center">
             {auth?.username.charAt(0).toUpperCase()}
           </span>
           <p className="font-semibold">{auth?.username}</p>
+          <Button
+            onClick={async () => {
+              await authService.logout();
+              router.push("/");
+            }}
+          >
+            <LogOut />
+          </Button>
         </div>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
