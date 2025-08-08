@@ -12,6 +12,7 @@ from app.routers import tasks
 from app.routers import auth
 from app.routers import csrf
 from app.routers import users
+from app.routers import ws
 from app.schemas.main import HealthCheckResponse
 from app.middleware import limiter, SecurityHeadersMiddleware, CSRFDoubleSubmitMiddleware
 from app.config import settings
@@ -52,6 +53,7 @@ app.include_router(tasks.router)
 app.include_router(auth.router)
 app.include_router(csrf.router)
 app.include_router(users.router)
+app.include_router(ws.router)
 
 
 @app.get("/", tags=["Root"])

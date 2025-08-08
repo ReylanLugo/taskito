@@ -19,6 +19,7 @@ import AuthService from "@/services/authService";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
+import wsService from "@/services/websocketService";
 const TasksPriorityChart = dynamicImport(
   () =>
     import("@/components/dashboard/tasks-priority-chart").then(
@@ -91,6 +92,17 @@ export default function Dashboard() {
       authService.getUser();
     }
   }, []);
+
+  useEffect(() => {
+    if (!auth.id) return;
+    // Initialize ws service with Redux dispatch and then connect
+    wsService.setCurrentUser(auth.id);
+    wsService.initDispatch(dispatch);
+    wsService.connectTasks();
+    return () => {
+      wsService.disconnect("tasks");
+    };
+  }, [auth.id, dispatch]);
 
   return (
     <main className="p-4 max-w-7xl mx-auto">

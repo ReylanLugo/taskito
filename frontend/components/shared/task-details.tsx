@@ -9,14 +9,14 @@ import {
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
 import { Task } from "@/types/Tasks";
-import { useState, useEffect, useRef, use } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Edit, Send } from "lucide-react";
 import { PriorityLabel } from "./priority-label";
-import { useSelector } from "react-redux";
 import { RootState } from "@/lib/store";
 import { Button } from "../ui/button";
 import { ScrollArea, ScrollBar } from "../ui/scroll-area";
 import TaskEditDialog from "./task-edit-dialog";
+import { useAppSelector } from "@/lib/store/hooks";
 
 export default function TaskDetails({
   children,
@@ -27,9 +27,10 @@ export default function TaskDetails({
   task: Task;
   addComment: (taskId: number, comment: string) => void;
 }) {
-  const currentUser = useSelector((state: RootState) => state.auth);
+  const currentUser = useAppSelector((state: RootState) => state.auth);
   const [comment, setComment] = useState("");
   const viewportRef = useRef<HTMLDivElement>(null);
+  const usersState = useAppSelector((state: RootState) => state.users);
 
   const addCommentEvent = (e: React.FormEvent<HTMLButtonElement>) => {
     e.preventDefault();
@@ -46,7 +47,10 @@ export default function TaskDetails({
   return (
     <Dialog>
       <DialogTrigger>{children}</DialogTrigger>
-      <DialogContent data-testid="task-details-dialog" className="md:max-w-[800px] max-w-[400px] md:w-[800px] w-full">
+      <DialogContent
+        data-testid="task-details-dialog"
+        className="md:max-w-[800px] max-w-[400px] md:w-[800px] w-full"
+      >
         <DialogHeader>
           <DialogTitle className="text-base">Task Details</DialogTitle>
         </DialogHeader>
@@ -60,11 +64,25 @@ export default function TaskDetails({
                 {task.title}
               </Label>
               {(task.created_by == currentUser.id ||
-                currentUser.role === "admin") && (
-                <TaskEditDialog task={task} />
-              )}
+                currentUser.role === "admin") && <TaskEditDialog task={task} />}
             </div>
-            <PriorityLabel priority={task.priority} />
+            <div className="flex items-center gap-2 justify-between">
+              <span className="flex items-center gap-2">
+                {task.assigned_to &&
+                  (usersState.users.find((user) => user.id === task.assigned_to)
+                    ?.username ??
+                    "Unknown")}
+                <PriorityLabel priority={task.priority} />
+              </span>
+              <span
+                data-testid="task-due-date"
+                className="text-sm text-gray-400"
+              >
+                {task.due_date
+                  ? new Date(task.due_date).toLocaleDateString()
+                  : "No due date"}
+              </span>
+            </div>
             <ScrollArea className="max-h-[340px] text-gray-600 text-sm">
               <p>{task.description}</p>
               <ScrollBar orientation="vertical" />
@@ -114,7 +132,11 @@ export default function TaskDetails({
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
                 />
-                <Button data-testid="submit-comment" onClick={addCommentEvent} className="mt-auto">
+                <Button
+                  data-testid="submit-comment"
+                  onClick={addCommentEvent}
+                  className="mt-auto"
+                >
                   <Send />
                 </Button>
               </div>

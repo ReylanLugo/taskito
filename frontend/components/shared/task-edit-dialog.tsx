@@ -66,6 +66,7 @@ export default function TaskEditDialog({ task }: { task: Task }) {
       const response = await taskService.updateTask(task.id, values);
       if (response === 200) {
         toast.success("Task updated successfully");
+        setIsDialogOpen(false);
       }
     } catch (error) {
       const errorMessage = (error as AxiosError<{ detail?: string }>).response
@@ -76,8 +77,8 @@ export default function TaskEditDialog({ task }: { task: Task }) {
 
   const handleOpenChange = (open: boolean) => {
     setIsDialogOpen(open);
-    if (!open) {
-      form.reset();
+    if (open) {
+      form.reset(defaultValues);
     }
   };
 
@@ -149,13 +150,16 @@ export default function TaskEditDialog({ task }: { task: Task }) {
                       <DatePicker
                         data-testid="due-date-input"
                         id="due_date"
-                        {...field}
+                        name={field.name}
                         value={
                           field.value
                             ? field.value.toISOString().split("T")[0]
                             : undefined
                         }
-                        onChange={(value) => field.onChange(value)}
+                        onChange={(value) => {
+                          // Map undefined (from picker) to null (form state)
+                          field.onChange(value ?? null);
+                        }}
                       />
                     </FormControl>
                     <FormMessage />
@@ -171,7 +175,6 @@ export default function TaskEditDialog({ task }: { task: Task }) {
                     <FormLabel htmlFor="priority">Priority</FormLabel>
                     <FormControl>
                       <Select
-                        {...field}
                         value={field.value}
                         onValueChange={field.onChange}
                       >
@@ -206,9 +209,7 @@ export default function TaskEditDialog({ task }: { task: Task }) {
                         })) || []
                       }
                       selectedValue={field.value?.toString()}
-                      onChange={(value) =>
-                        field.onChange(Number(value) || null)
-                      }
+                      onChange={(value) => field.onChange(value ? Number(value) : null)}
                     />
                   </FormControl>
                   <FormMessage />
