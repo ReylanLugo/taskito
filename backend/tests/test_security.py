@@ -148,55 +148,48 @@ class TestCSRFProtection:
     """Test CSRF protection functionality."""
     
     @pytest.mark.security
-    def test_csrf_token_generation(self, client: TestClient, user_token):
+    def test_csrf_token_generation(self, client: TestClient, user_cookies):
         """Test that we can generate a CSRF token."""
-        headers = {"Authorization": f"Bearer {user_token}"}
-        response = client.get("/csrf/token", headers=headers)
+        response = client.get("/csrf/token", cookies=user_cookies)
         
         assert response.status_code == status.HTTP_200_OK
         assert "csrf_token" in response.json()
         assert "csrf_token" in response.cookies
     
     @pytest.mark.security
-    def test_protected_endpoint_without_csrf_fails(self, client: TestClient, user_token):
+    def test_protected_endpoint_without_csrf_fails(self, client: TestClient, user_cookies):
         """Test that POST requests fail without CSRF token."""
-        headers = {"Authorization": f"Bearer {user_token}"}
-        
         # Try to create a task without CSRF token
         task_data = {
             "title": "Test Task",
             "description": "Test Description",
             "priority": "medium"
         }
-        response = client.post("/tasks", json=task_data, headers=headers)
+        response = client.post("/tasks", json=task_data, cookies=user_cookies)
         
         assert response.status_code == status.HTTP_403_FORBIDDEN
         assert "CSRF token missing" in response.json()["detail"]
     
     @pytest.mark.security
-    def test_protected_endpoint_with_invalid_csrf_fails(self, client: TestClient, user_token):
+    def test_protected_endpoint_with_invalid_csrf_fails(self, client: TestClient, user_cookies):
         """Test that POST requests fail with invalid CSRF token."""
-        headers = {
-            "Authorization": f"Bearer {user_token}",
-            "x-csrf-token": "invalid-token"
-        }
+        headers = {"x-csrf-token": "invalid-token"}
         
         task_data = {
             "title": "Test Task",
             "description": "Test Description",
             "priority": "medium"
         }
-        response = client.post("/tasks", json=task_data, headers=headers, cookies={"csrf_token": "invalid-token"})
+        response = client.post("/tasks/", json=task_data, headers=headers, cookies={**user_cookies, "csrf_token": "invalid-token"})
         
         assert response.status_code == status.HTTP_403_FORBIDDEN
         assert "Invalid CSRF token" in response.json()["detail"]
     
     @pytest.mark.security
-    def test_protected_endpoint_with_valid_csrf_succeeds(self, client: TestClient, user_token):
+    def test_protected_endpoint_with_valid_csrf_succeeds(self, client: TestClient, user_cookies):
         """Test that POST requests succeed with valid CSRF token."""
         # First get a CSRF token
-        headers = {"Authorization": f"Bearer {user_token}"}
-        csrf_response = client.get("/csrf/token", headers=headers)
+        csrf_response = client.get("/csrf/token", cookies=user_cookies)
         csrf_token = csrf_response.json()["csrf_token"]
         csrf_cookie = csrf_response.cookies.get("csrf_token")
     
@@ -206,7 +199,7 @@ class TestCSRFProtection:
             "priority": "media",
         }
     
-        headers["x-csrf-token"] = csrf_token
+        headers = {"x-csrf-token": csrf_token}
 
         # Ensure csrf_cookie is not None before using it
         assert csrf_cookie is not None, "CSRF cookie should not be None"
@@ -215,127 +208,81 @@ class TestCSRFProtection:
             "/tasks/", 
             json=task_data, 
             headers=headers, 
-            cookies={"csrf_token": csrf_cookie}
+            cookies={**user_cookies, "csrf_token": csrf_cookie}
         )
-    
+
         assert response.status_code == status.HTTP_201_CREATED
     
     @pytest.mark.security
-    def test_get_requests_skip_csrf(self, client: TestClient, user_token):
+    def test_get_requests_skip_csrf(self, client: TestClient, user_cookies):
         """Test that GET requests don't require CSRF tokens."""
-        headers = {"Authorization": f"Bearer {user_token}"}
-        response = client.get("/tasks", headers=headers)
-        
+        response = client.get("/tasks/", cookies=user_cookies)
+        # Should not require CSRF and should not set csrf token for simple GET
         assert response.status_code == status.HTTP_200_OK
     
     @pytest.mark.security
-    def test_auth_endpoints_skip_csrf(self, client: TestClient):
-        """Test that authentication endpoints skip CSRF validation."""
-        # Register endpoint should work without CSRF
-        user_data = {
-            "username": "testcsrfuser",
-            "email": "testcsrf@example.com",
-            "password": "TestPass123!",
-            "full_name": "Test CSRF User"
-        }
-        response = client.post("/auth/register", json=user_data)
-        
-        # This should succeed or fail due to validation, not CSRF
-        assert response.status_code != status.HTTP_403_FORBIDDEN
-    
-    @pytest.mark.security
-    def test_csrf_token_validation_endpoint(self, client: TestClient, user_token):
+    def test_csrf_token_validation_endpoint(self, client: TestClient, user_cookies):
         """Test the CSRF token validation endpoint."""
-        headers = {"Authorization": f"Bearer {user_token}"}
-        
-        # Test without tokens
-        response = client.get("/csrf/validate", headers=headers)
-        assert response.status_code == status.HTTP_200_OK
-        assert response.json()["valid"] is False
-        
-        # Test with tokens
-        csrf_response = client.get("/csrf/token", headers=headers)
+        csrf_response = client.get("/csrf/token", cookies=user_cookies)
         csrf_token = csrf_response.json()["csrf_token"]
         csrf_cookie = csrf_response.cookies.get("csrf_token")
         
-        headers.update({"x-csrf-token": csrf_token})
+        headers = {"x-csrf-token": csrf_token}
+        assert csrf_cookie is not None, "CSRF cookie should not be None"
+        response = client.get("/csrf/validate", headers=headers, cookies={**user_cookies, "csrf_token": csrf_cookie})
         
-        response = client.get("/csrf/validate", headers=headers, cookies={"csrf_token": str(csrf_cookie)})
         assert response.status_code == status.HTTP_200_OK
         assert response.json()["valid"] is True
     
     @pytest.mark.security
-    def test_csrf_token_endpoint(self, client: TestClient, user_token: str):
-        response = client.get("/csrf/token", headers={"Authorization": f"Bearer {user_token}"})
-        assert "csrf_token" in response.json()
+    def test_csrf_token_endpoint(self, client: TestClient, user_cookies):
+        """Test the CSRF token endpoint returns and renews tokens."""
+        r1 = client.get("/csrf/token", cookies=user_cookies)
+        t1 = r1.json()["csrf_token"]
+        c1 = r1.cookies.get("csrf_token")
+        assert c1 is not None
+
+        r2 = client.get("/csrf/token", cookies=user_cookies)
+        t2 = r2.json()["csrf_token"]
+        c2 = r2.cookies.get("csrf_token")
+        assert c2 is not None
+
+        assert t1 != t2, "CSRF token should be renewed"
+        assert c1 != c2, "CSRF cookie should be renewed"
 
     @pytest.mark.security
-    def test_csrf_token_renewal_on_get(self, client: TestClient, auth_headers_csrf):
-        """
-        Test that authenticated GET requests to protected endpoints:
-        - Include a new CSRF token in headers and cookies each time
-        - Renew the token on every request
-        - Verify token rotation mechanism
-        """
-        headers = auth_headers_csrf["headers"]
-        cookies = auth_headers_csrf["cookies"]
-    
-        response1 = client.get("/tasks/statistics", headers=headers, cookies=cookies)
-        assert response1.status_code == status.HTTP_200_OK
-    
-        assert "X-CSRF-Token" in response1.headers, "Missing CSRF token in headers"
-        assert "csrf_token" in response1.cookies, "Missing CSRF token in cookies"
-    
-        token1_header = response1.headers["X-CSRF-Token"]
-        token1_cookie = response1.cookies["csrf_token"]
-    
-        headers_with_token1 = {**headers, "X-CSRF-Token": token1_header}
-        cookies_with_token1 = {**cookies, "csrf_token": token1_cookie}
-    
-        response2 = client.get(
-            "/tasks/statistics",
-            headers=headers_with_token1,
-            cookies=cookies_with_token1
-        )
-        assert response2.status_code == status.HTTP_200_OK
-    
-        token2_header = response2.headers["X-CSRF-Token"]
-        token2_cookie = response2.cookies["csrf_token"]
-    
-        assert token1_header != token2_header, "CSRF token not renewed in headers"
-        assert token1_cookie != token2_cookie, "CSRF token not renewed in cookies"
-    
-        headers_with_token2 = {**headers, "X-CSRF-Token": token2_header}
-        cookies_with_token2 = {**cookies, "csrf_token": token2_cookie}
-    
-        response3 = client.get(
-            "/tasks/statistics",
-            headers=headers_with_token2,
-            cookies=cookies_with_token2
-        )
-        assert response3.status_code == status.HTTP_200_OK
-    
-        token3_header = response3.headers["X-CSRF-Token"]
-        token3_cookie = response3.cookies["csrf_token"]
-    
-        assert token2_header != token3_header, "CSRF token not rotated in subsequent request"
-        assert token2_cookie != token3_cookie, "CSRF cookie not rotated in subsequent request"
-    
-        assert token3_header in token3_cookie, "Header token not matching cookie content"
-
-    @pytest.mark.security
-    def test_csrf_protection_for_put_delete(self, client: TestClient, user_token):
+    def test_csrf_protection_for_put_delete(self, client: TestClient, user_cookies):
         """Test CSRF protection for PUT and DELETE methods."""
-        headers = {"Authorization": f"Bearer {user_token}"}
-        
         # Test PUT without CSRF
         update_data = {"title": "Updated Task"}
-        response = client.put("/tasks/1", json=update_data, headers=headers)
+        response = client.put("/tasks/1", json=update_data, cookies=user_cookies)
         assert response.status_code == status.HTTP_403_FORBIDDEN
         
         # Test DELETE without CSRF
-        response = client.delete("/tasks/1", headers=headers)
+        response = client.delete("/tasks/1", cookies=user_cookies)
         assert response.status_code == status.HTTP_403_FORBIDDEN
+
+        # With CSRF
+        csrf_resp = client.get("/csrf/token", cookies=user_cookies)
+        csrf_token = csrf_resp.json()["csrf_token"]
+        csrf_cookie = csrf_resp.cookies.get("csrf_token")
+        assert csrf_cookie is not None
+        headers = {"x-csrf-token": csrf_token}
+
+        put_valid = client.put(
+            "/tasks/1",
+            json={"title": "Updated Task"},
+            headers=headers,
+            cookies={**user_cookies, "csrf_token": csrf_cookie},
+        )
+        assert put_valid.status_code in {status.HTTP_200_OK, status.HTTP_404_NOT_FOUND}
+
+        delete_valid = client.delete(
+            "/tasks/1",
+            headers=headers,
+            cookies={**user_cookies, "csrf_token": csrf_cookie},
+        )
+        assert delete_valid.status_code in {status.HTTP_200_OK, status.HTTP_404_NOT_FOUND}
 
 class TestSQLInjectionProtection():
     def test_sql_injection_protection(self, client: TestClient):

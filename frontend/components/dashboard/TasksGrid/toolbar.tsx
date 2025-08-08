@@ -123,7 +123,7 @@ export default function Toolbar() {
   };
 
   return (
-    <div className="filters-toolbar mb-6 flex flex-wrap justify-between gap-4">
+    <div data-testid="task-toolbar" className="filters-toolbar mb-6 flex flex-wrap justify-between gap-4">
       <form
         onSubmit={handleSubmit}
         className="flex flex-col flex-wrap gap-4 justify-center"
@@ -132,6 +132,7 @@ export default function Toolbar() {
         <div className="space-y-2">
           <Label htmlFor="search">Keyword Search</Label>
           <Input
+            data-testid="search-input"
             id="search"
             type="text"
             name="search"
@@ -153,13 +154,13 @@ export default function Toolbar() {
                 handleChange({ target: { name: "completed", value } })
               }
             >
-              <SelectTrigger>
+              <SelectTrigger data-testid="completion-filter">
                 <SelectValue placeholder="All Statuses" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="ALL">All</SelectItem>
-                <SelectItem value="true">Completed</SelectItem>
-                <SelectItem value="false">Pending</SelectItem>
+                <SelectItem data-value="true" value="true">Completed</SelectItem>
+                <SelectItem data-value="false" value="false">Pending</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -174,14 +175,14 @@ export default function Toolbar() {
                 handleChange({ target: { name: "priority", value } })
               }
             >
-              <SelectTrigger>
+              <SelectTrigger data-testid="priority-filter">
                 <SelectValue placeholder="All Priorities" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="NONE">All</SelectItem>
                 <SelectItem value="LOW">Low</SelectItem>
                 <SelectItem value="MEDIUM">Medium</SelectItem>
-                <SelectItem value="HIGH">High</SelectItem>
+                <SelectItem data-value="alta" value="HIGH">High</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -232,7 +233,7 @@ export default function Toolbar() {
           {/* More Filters */}
           <Dialog>
             <DialogTrigger asChild>
-              <Button variant="outline" className="mt-4">
+              <Button data-testid="open-more-filters" variant="outline" className="mt-4">
                 <FilterIcon />
               </Button>
             </DialogTrigger>
@@ -315,7 +316,7 @@ export default function Toolbar() {
           </Dialog>
 
           <div className="flex items-end">
-            <Button type="submit" className="w-full mt-2">
+            <Button data-testid="apply-filters" type="submit" className="w-full mt-2">
               Apply Filters
             </Button>
           </div>

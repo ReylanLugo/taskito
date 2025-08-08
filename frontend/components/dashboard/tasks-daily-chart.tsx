@@ -86,7 +86,7 @@ export function TasksDailyChartComponent() {
         <XAxis dataKey="name" />
         <YAxis />
         <Tooltip />
-        <Bar dataKey="count" fill="#2b7fff" />
+        <Bar dataKey="count" fill="#2b7fff" isAnimationActive={false} barSize={24} />
       </BarChart>
     </ResponsiveContainer>
   );

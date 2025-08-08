@@ -36,6 +36,7 @@ export function TasksPriorityChartComponent({ data }: TasksPriorityChartProps) {
             outerRadius={80}
             fill="#8884d8"
             dataKey="value"
+            isAnimationActive={false}
             label={({ name, percent }) =>
               percent !== undefined ? `${name}: ${(percent * 100).toFixed(0)}%` : name
             }

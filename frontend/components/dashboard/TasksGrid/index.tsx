@@ -194,7 +194,7 @@ export default function TasksGrid() {
           )}
       </div>
 
-      <div ref={lastTaskRef} />
+      <div ref={lastTaskRef} data-testid="last-task-ref" />
 
       {/* Loading indicator at bottom */}
       {isPending && !isLoadingMore && (

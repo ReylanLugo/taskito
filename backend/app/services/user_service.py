@@ -3,9 +3,11 @@ from fastapi.exceptions import HTTPException
 from typing import List, Optional, cast
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from passlib.context import CryptContext
 from jose import JWTError, jwt
 from app.models.user import User, UserRole
+from app.models.task import Task
 from app.schemas.user import UserCreate, UserUpdate, UserPasswordUpdate, TokenData
 from app.config import settings
 import logging
@@ -111,6 +113,52 @@ class UserService:
 
         return users
 
+    def delete_user(self, user_id: int) -> bool:
+        """
+        Delete a user by ID.
+        
+        Args:
+            user_id: ID of the user to delete
+            
+        Returns:
+            True if user was deleted, False if not found
+        """
+        try:
+            user: Optional[User] = self.db.query(User).filter(User.id == user_id).first()
+            if not user:
+                logging.info(f"User not found for deletion (id={user_id})")
+                return False
+            self.db.delete(user)
+            self.db.commit()
+            logging.info(f"User deleted successfully (id={user_id})")
+            return True
+        except Exception as e:
+            logging.error(f"Error deleting user {user_id}: {e}")
+            self.db.rollback()
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+    def get_user_tasks(self, user_id: int, include_assigned: bool = True) -> List[Task]:
+        """
+        Retrieve tasks related to a user.
+        
+        Args:
+            user_id: The ID of the user
+            include_assigned: If True, includes tasks assigned to the user as well as created by the user
+            
+        Returns:
+            List of Task objects
+        """
+        try:
+            query = self.db.query(Task).filter(Task.created_by == user_id)
+            if include_assigned:
+                query = query.union(self.db.query(Task).filter(Task.assigned_to == user_id))
+            tasks: List[Task] = query.all()
+            logging.info(f"Retrieved {len(tasks)} tasks for user {user_id} (include_assigned={include_assigned})")
+            return tasks
+        except Exception as e:
+            logging.error(f"Error retrieving tasks for user {user_id}: {e}")
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
     def create_user(self, user_data: UserCreate) -> User:
         """
         Create a new user with hashed password.
@@ -162,20 +210,44 @@ class UserService:
                 return None
             raise
         
-
         try:
             update_data = user_update.model_dump(exclude_unset=True)
+
+            # Pre-validate unique fields to provide friendly error messages
+            if 'username' in update_data and update_data['username']:
+                new_username = update_data['username'].lower()
+                if not self.is_username_available(new_username, exclude_user_id=user_id):
+                    logging.info(f"Username already taken (username={new_username}, user_id={user_id})")
+                    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Username is already taken")
+                update_data['username'] = new_username
+
+            if 'email' in update_data and update_data['email']:
+                new_email = update_data['email'].lower()
+                if not self.is_email_available(new_email, exclude_user_id=user_id):
+                    logging.info(f"Email already taken (email={new_email}, user_id={user_id})")
+                    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email is already taken")
+                update_data['email'] = new_email
+
             for field, value in update_data.items():
-                if field == 'username' and value:
-                    value = value.lower()
-                elif field == 'email' and value:
-                    value = value.lower()
                 setattr(db_user, field, value)
-            
-            self.db.commit()
+
+            try:
+                self.db.commit()
+            except IntegrityError as e:
+                self.db.rollback()
+                msg = str(e.orig)
+                logging.error(f"Integrity error updating user {user_id}: {msg}")
+                if "ix_users_username" in msg or "username" in msg:
+                    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Username is already taken")
+                if "ix_users_email" in msg or "email" in msg:
+                    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email is already taken")
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid data: unique constraint violated")
+
             self.db.refresh(db_user)
-            logging.info(f"User updated (id={user_id}, username={db_user.username}")
+            logging.info(f"User updated (id={user_id}, username={db_user.username})")
             return db_user
+        except HTTPException:
+            raise
         except Exception as e:
             logging.error(f"Error updating user {user_id}: {e}")
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))

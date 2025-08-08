@@ -26,8 +26,8 @@ export const PriorityLabel = ({ priority }: { priority: TaskPriority }) => {
   };
 
   return (
-    <Label>
-      <span className={cn("text-xs px-2 py-1 rounded-full", color(priority))}>
+    <Label data-testid="priority-label">
+      <span data-testid="priority-text" className={cn("text-xs px-2 py-1 rounded-full", color(priority))}>
         {text(priority)}
       </span>
     </Label>

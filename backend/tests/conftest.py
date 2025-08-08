@@ -125,8 +125,8 @@ def created_admin(user_service: UserService, test_admin_data: Dict[str, Any]) ->
 
 
 @pytest.fixture
-def user_token(client: TestClient, created_user: UserModel, test_user_data: Dict[str, Any]) -> str:
-    """Get authentication token for test user."""
+def user_cookies(client: TestClient, created_user: UserModel, test_user_data: Dict[str, Any]) -> Dict[str, str]:
+    """Login test user and return auth cookies."""
     response = client.post(
         "/auth/token",
         data={
@@ -134,12 +134,20 @@ def user_token(client: TestClient, created_user: UserModel, test_user_data: Dict
             "password": test_user_data["password"]
         }
     )
-    return response.json()["access_token"]
+    access_cookie = response.cookies.get("taskito_access_token")
+    refresh_cookie = response.cookies.get("taskito_refresh_token")
+    assert access_cookie is not None, "Missing taskito_access_token cookie after login"
+    assert refresh_cookie is not None, "Missing taskito_refresh_token cookie after login"
+    # Return only the auth cookies we set in the app
+    return {
+        "taskito_access_token": access_cookie,
+        "taskito_refresh_token": refresh_cookie,
+    }
 
 
 @pytest.fixture
-def admin_token(client: TestClient, created_admin: UserModel, test_admin_data: Dict[str, Any]) -> str:
-    """Get authentication token for test admin."""
+def admin_cookies(client: TestClient, created_admin: UserModel, test_admin_data: Dict[str, Any]) -> Dict[str, str]:
+    """Login admin user and return auth cookies."""
     response = client.post(
         "/auth/token",
         data={
@@ -147,41 +155,51 @@ def admin_token(client: TestClient, created_admin: UserModel, test_admin_data: D
             "password": test_admin_data["password"]
         }
     )
-    return response.json()["access_token"]
+    access_cookie = response.cookies.get("taskito_access_token")
+    refresh_cookie = response.cookies.get("taskito_refresh_token")
+    assert access_cookie is not None, "Missing taskito_access_token cookie after login"
+    assert refresh_cookie is not None, "Missing taskito_refresh_token cookie after login"
+    return {
+        "taskito_access_token": access_cookie,
+        "taskito_refresh_token": refresh_cookie,
+    }
 
 
 @pytest.fixture(scope="function")
-def auth_headers_csrf(client: TestClient, user_token: str) -> Dict[str, Any]:
-    """Get CSRF token for authenticated user with cookies"""
-    response = client.get("/tasks", headers={"Authorization": f"Bearer {user_token}"})
-    csrf_token = response.headers["X-CSRF-Token"]
-    csrf_cookie = response.cookies.get("csrf_token")
+def auth_headers_csrf(client: TestClient, user_cookies: Dict[str, str]) -> Dict[str, Any]:
+    """Get CSRF token for authenticated user using cookie-based auth."""
+    csrf_response = client.get("/csrf/token", cookies=user_cookies)
+    csrf_token = csrf_response.json()["csrf_token"]
+    csrf_cookie = csrf_response.cookies.get("csrf_token")
+    
+    # Merge auth cookies with csrf cookie
+    cookies: Dict[str, str] = {**user_cookies}
+    if csrf_cookie is not None:
+        cookies["csrf_token"] = csrf_cookie
     
     return {
         "headers": {
-            "Authorization": f"Bearer {user_token}",
             "x-csrf-token": csrf_token
         },
-        "cookies": {
-            "csrf_token": csrf_cookie
-        }
+        "cookies": cookies
     }
 
 @pytest.fixture(scope="function")
-def admin_headers_csrf(client: TestClient, admin_token: str) -> Dict[str, Any]:
-    """Get CSRF token for admin user with cookies"""
-    response = client.get("/tasks", headers={"Authorization": f"Bearer {admin_token}"})
-    csrf_token = response.headers["X-CSRF-Token"]
-    csrf_cookie = response.cookies.get("csrf_token")
+def admin_headers_csrf(client: TestClient, admin_cookies: Dict[str, str]) -> Dict[str, Any]:
+    """Get CSRF token for admin user using cookie-based auth."""
+    csrf_response = client.get("/csrf/token", cookies=admin_cookies)
+    csrf_token = csrf_response.json()["csrf_token"]
+    csrf_cookie = csrf_response.cookies.get("csrf_token")
+    
+    cookies: Dict[str, str] = {**admin_cookies}
+    if csrf_cookie is not None:
+        cookies["csrf_token"] = csrf_cookie
     
     return {
         "headers": {
-            "Authorization": f"Bearer {admin_token}",
             "x-csrf-token": csrf_token
         },
-        "cookies": {
-            "csrf_token": csrf_cookie
-        }
+        "cookies": cookies
     }
 
 @pytest.fixture

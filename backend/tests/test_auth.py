@@ -19,13 +19,7 @@ class TestAuthRegistration:
         response = client.post("/auth/register", json=test_user_data)
         
         assert response.status_code == 201
-        data = response.json()
-        assert data["username"] == test_user_data["username"]
-        assert data["email"] == test_user_data["email"]
-        assert data["role"] == test_user_data["role"]
-        assert data["is_active"] is True
-        assert "id" in data
-        assert "password" not in data  # Password should not be returned
+        assert response.json() == "User registered successfully"
 
     @pytest.mark.auth
     def test_register_duplicate_username(self, client: TestClient, created_user: UserModel, test_user_data: Dict[str, Any]):
@@ -92,8 +86,7 @@ class TestAuthRegistration:
         response = client.post("/auth/register", json=admin_data)
         
         assert response.status_code == 201
-        data = response.json()
-        assert data["role"] == "admin"
+        assert response.json() == "User registered successfully"
 
 
 class TestAuthLogin:
@@ -112,10 +105,11 @@ class TestAuthLogin:
         
         assert response.status_code == 200
         data = response.json()
-        assert "access_token" in data
-        assert data["token_type"] == "bearer"
-        assert isinstance(data["access_token"], str)
-        assert len(data["access_token"]) > 0
+        assert data == {"message": "Login successful"}
+        access_cookie = response.cookies.get("taskito_access_token")
+        refresh_cookie = response.cookies.get("taskito_refresh_token")
+        assert access_cookie is not None, "Missing taskito_access_token cookie after login"
+        assert refresh_cookie is not None, "Missing taskito_refresh_token cookie after login"
 
     @pytest.mark.auth
     def test_login_json_success(self, client: TestClient, created_user: UserModel, test_user_data: Dict[str, Any]):
@@ -130,8 +124,11 @@ class TestAuthLogin:
         
         assert response.status_code == 200
         data = response.json()
-        assert "access_token" in data
-        assert data["token_type"] == "bearer"
+        assert data == {"message": "Login successful"}
+        access_cookie = response.cookies.get("taskito_access_token")
+        refresh_cookie = response.cookies.get("taskito_refresh_token")
+        assert access_cookie is not None, "Missing taskito_access_token cookie after login"
+        assert refresh_cookie is not None, "Missing taskito_refresh_token cookie after login"
 
     @pytest.mark.auth
     def test_login_wrong_password(self, client: TestClient, created_user: UserModel, test_user_data: Dict[str, Any]):
@@ -202,10 +199,11 @@ class TestAuthProfile:
         
         assert response.status_code == 200
         data = response.json()
-        assert data["id"] == created_user.id
-        assert data["username"] == created_user.username
-        assert data["email"] == created_user.email
-        assert "password" not in data
+        user = data["user"]
+        assert user["id"] == created_user.id
+        assert user["username"] == created_user.username
+        assert user["email"] == created_user.email
+        assert "password" not in user
 
     @pytest.mark.auth
     def test_get_current_user_not_found(
@@ -240,12 +238,12 @@ class TestAuthProfile:
         user_service.deactivate_user(user_id)
     
         token = user_service.create_access_token({"sub": test_user_data["username"]})
-    
+
         response = client.get(
-            "/auth/me", 
-            headers={"Authorization": f"Bearer {token}"}
+            "/auth/me",
+            cookies={"taskito_access_token": token}
         )
-    
+
         assert response.status_code == 400
         assert "Inactive user" in response.json()["detail"]
 
@@ -277,7 +275,8 @@ class TestAuthProfile:
         
         assert response.status_code == 200
         data = response.json()
-        assert data["username"] == "newusername"
+        user = data["user"]
+        assert user["username"] == "newusername"
 
     @pytest.mark.auth
     def test_update_user_profile_email(self, client: TestClient, auth_headers_csrf: Dict[str, Any]):
@@ -293,7 +292,8 @@ class TestAuthProfile:
         
         assert response.status_code == 200
         data = response.json()
-        assert data["email"] == "newemail@example.com"
+        user = data["user"]
+        assert user["email"] == "newemail@example.com"
 
     @pytest.mark.auth
     def test_update_user_profile_duplicate_username(self, client: TestClient, auth_headers_csrf: Dict[str, Any], created_admin: UserModel):
@@ -339,7 +339,7 @@ class TestAuthProfile:
         
         assert response.status_code == 200
         data = response.json()
-        assert data["role"] == "user"
+        assert data["user"]["role"] == "user"
 
 
 class TestAuthPasswordChange:

@@ -1,0 +1,35 @@
+{
+  "presets": ["next/babel"],
+  "env": {
+    "development": {
+      "plugins": [
+        [
+          "istanbul",
+          {
+            "exclude": [
+              "cypress/**",
+              "**/*.cy.*",
+              "**/*.spec.*",
+              "middleware.ts"
+            ]
+          }
+        ]
+      ]
+    },
+    "test": {
+      "plugins": [
+        [
+          "istanbul",
+          {
+            "exclude": [
+              "cypress/**",
+              "**/*.cy.*",
+              "**/*.spec.*",
+              "middleware.ts"
+            ]
+          }
+        ]
+      ]
+    }
+  }
+}

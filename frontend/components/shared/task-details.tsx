@@ -46,11 +46,11 @@ export default function TaskDetails({
   return (
     <Dialog>
       <DialogTrigger>{children}</DialogTrigger>
-      <DialogContent className="md:max-w-[800px] max-w-[400px] md:w-[800px] w-full">
+      <DialogContent data-testid="task-details-dialog" className="md:max-w-[800px] max-w-[400px] md:w-[800px] w-full">
         <DialogHeader>
           <DialogTitle className="text-base">Task Details</DialogTitle>
         </DialogHeader>
-        <div className="flex md:flex-row flex-col gap-4 items-center h-[400px]">
+        <div className="flex md:flex-row flex-col gap-4 items-center h-full md:h-[400px] w-full">
           <div className="flex flex-col gap-2 flex-1 h-full">
             <div className="flex items-center justify-between gap-2">
               <Label
@@ -108,12 +108,13 @@ export default function TaskDetails({
                 <Input
                   id="comment"
                   type="text"
+                  data-testid="comment-input"
                   placeholder="Add a comment..."
                   className="mt-auto bg-white"
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
                 />
-                <Button onClick={addCommentEvent} className="mt-auto">
+                <Button data-testid="submit-comment" onClick={addCommentEvent} className="mt-auto">
                   <Send />
                 </Button>
               </div>

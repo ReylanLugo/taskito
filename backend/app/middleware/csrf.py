@@ -26,6 +26,10 @@ class CSRFDoubleSubmitMiddleware(BaseHTTPMiddleware):
         self.csrf_cookie_name = "csrf_token"
         self.csrf_header_name = "X-CSRF-Token"
         self.secret_key = settings.secret_key.encode()
+        # Cookie-only auth: presence of this cookie means authenticated
+        self.session_cookie_name = "taskito_access_token"
+        # Paths that must bypass CSRF to allow auth flows (proxy-safe)
+        self.excluded_prefixes = ("/auth/", "/api/auth/", "/csrf/", "/api/csrf/")
         
     def _generate_csrf_token(self) -> str:
         """Generate a secure random CSRF token."""
@@ -59,31 +63,37 @@ class CSRFDoubleSubmitMiddleware(BaseHTTPMiddleware):
         except Exception:
             return None
     
+    def _is_authenticated(self, request: Request) -> bool:
+        """Cookie-only authentication: user is authenticated if session cookie exists."""
+        return request.cookies.get(self.session_cookie_name) is not None
+
+    def _is_excluded_path(self, path: str) -> bool:
+        """Whether the path should skip CSRF (auth/csrf helper endpoints)."""
+        return any(path.startswith(p) for p in self.excluded_prefixes)
+
     def _should_skip_csrf(self, request: Request) -> bool:
-        """Determine if CSRF check should be skipped."""
-        # Skip for safe HTTP methods
+        """Determine if CSRF check should be skipped under cookie-only auth."""
+        # 1) Safe HTTP methods never require CSRF
         if request.method in ("GET", "HEAD", "OPTIONS"):
             return True
-            
-        # Skip for authentication endpoints (they handle their own security)
-        if request.url.path.startswith("/auth/"):
+
+        # 2) Exclude auth/csrf endpoints (e.g., refresh, logout)
+        if self._is_excluded_path(request.url.path):
             return True
-            
-        # Skip if no Authorization header (public endpoints)
-        auth_header = request.headers.get("Authorization")
-        if not auth_header or not auth_header.startswith("Bearer "):
+
+        # 3) Public endpoints (no session cookie) don't need CSRF
+        if not self._is_authenticated(request):
             return True
-            
+
+        # Otherwise, enforce CSRF
         return False
 
     def _should_set_csrf(self, request: Request) -> bool:
-        """Determine if CSRF token should be set in response"""
-        auth_cookie = request.cookies.get("taskito_access_token")
+        """Set CSRF token on authenticated GET requests for app pages/APIs (not auth helpers)."""
         return bool(
-            request.method == "GET" 
-            and not request.url.path.startswith("/auth/")
-            and not request.url.path.startswith("/csrf/")
-            and auth_cookie is not None
+            request.method == "GET"
+            and not self._is_excluded_path(request.url.path)
+            and self._is_authenticated(request)
         )
     
     async def dispatch(self, request: Request, call_next):
@@ -95,7 +105,7 @@ class CSRFDoubleSubmitMiddleware(BaseHTTPMiddleware):
             cookie_token = request.cookies.get(self.csrf_cookie_name)
             header_token = request.headers.get(self.csrf_header_name)
             
-            if not cookie_token or not header_token:
+            if not cookie_token and not header_token:
                 return JSONResponse(
                     status_code=status.HTTP_403_FORBIDDEN,
                     content={"detail": "CSRF token missing"}
@@ -125,6 +135,7 @@ class CSRFDoubleSubmitMiddleware(BaseHTTPMiddleware):
                 secure=True,
                 samesite="strict",
                 max_age=3600,
+                path="/",
             )
             
             response.headers["X-CSRF-Token"] = csrf_token

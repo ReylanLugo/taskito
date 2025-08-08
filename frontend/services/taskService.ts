@@ -221,6 +221,14 @@ class TaskService {
     }
   }
 
+  /**
+   * Adds a comment to a specific task.
+   *
+   * @param taskId - The ID of the task to which the comment is to be added.
+   * @param comment - The content of the comment to be added.
+   * @returns Promise that resolves with the status code of the response.
+   * @throws Error if there was an error adding the comment.
+   */
   async addComment(taskId: number, comment: string) {
     try {
       const response = await this.api.post(

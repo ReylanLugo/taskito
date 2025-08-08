@@ -58,6 +58,7 @@ class TestMainEndpoints:
             "/",
             "/health",
             "/auth/token",
+            "/auth/logout",
             "/openapi.json",
             "/docs",
             "/redoc",

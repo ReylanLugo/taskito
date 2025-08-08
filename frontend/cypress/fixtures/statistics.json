@@ -1,0 +1,9 @@
+{
+    "total_tasks": 10,
+    "completed_tasks": 5,
+    "pending_tasks": 3,
+    "overdue_tasks": 2,
+    "high_priority_tasks": 4,
+    "medium_priority_tasks": 3,
+    "low_priority_tasks": 2
+}

@@ -8,3 +8,6 @@ docker-compose exec api alembic upgrade head
 
 # Run tests cmd:
 pytest --cov=app --cov-report=term-missing --cov-report=html  
+
+# Run Cypress tests cmd:
+npx cypress run --component   

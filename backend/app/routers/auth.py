@@ -111,7 +111,7 @@ async def login_for_access_token(
         secure=True,
         samesite="strict",
         max_age=int(refresh_token_expires.total_seconds()),
-        path="/api/auth/refresh"
+        path="/"
     )
     return response
 
@@ -214,6 +214,16 @@ async def refresh_token(
     response = JSONResponse(
         status_code=status.HTTP_200_OK, 
         content={"access_token": access_token, "token_type": "bearer"}
+    )
+    # Set new access token cookie so the session continues without forcing a logout
+    response.set_cookie(
+        key="taskito_access_token",
+        value=access_token,
+        httponly=True,
+        secure=True,
+        samesite="strict",
+        max_age=int(access_token_expires.total_seconds()),
+        path="/"
     )
     return response
 
@@ -398,10 +408,16 @@ async def logout_user(
     """
     Logout user by clearing access and refresh token cookies.
     """
+    # Build a concrete response to ensure Set-Cookie headers are sent
+    resp = JSONResponse(status_code=status.HTTP_200_OK, content={"message": "Logout successful"})
+
     # Clear access token cookie
-    response.delete_cookie("taskito_access_token", path="/")
-    
+    resp.delete_cookie("taskito_access_token", path="/")
+
     # Clear refresh token cookie
-    response.delete_cookie("taskito_refresh_token", path="/api/auth/refresh")
-    
-    return {"message": "Logout successful"}
+    resp.delete_cookie("taskito_refresh_token", path="/")
+
+    # Clear CSRF cookie
+    resp.delete_cookie("csrf_token", path="/")
+
+    return resp

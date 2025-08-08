@@ -1,3 +1,4 @@
+import { Role } from "@/types/User";
 import { createSlice } from "@reduxjs/toolkit";
 import type { PayloadAction } from "@reduxjs/toolkit";
 
@@ -6,7 +7,7 @@ export interface AuthState {
   username: string;
   email: string;
   is_active: boolean;
-  role: string;
+  role: Role;
   updated_at: string;
   created_at: string;
   csrfToken: string;
@@ -17,7 +18,7 @@ const initialState: AuthState = {
   username: "",
   email: "",
   is_active: false,
-  role: "",
+  role: Role.USER,
   updated_at: "",
   created_at: "",
   csrfToken: "",
