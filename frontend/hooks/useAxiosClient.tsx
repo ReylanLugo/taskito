@@ -39,6 +39,11 @@ const useAxiosClient = () => {
     },
     async (error) => {
       const originalRequest = error.config;
+      if (error.response?.status === 429) {
+        await axiosClient.post("/auth/logout");
+        window.location.href = "/";
+        return Promise.reject(error);
+      }
 
       if (error.response?.status === 401 && !originalRequest._retry) {
         originalRequest._retry = true;
@@ -80,15 +85,13 @@ const useAxiosClient = () => {
       return Promise.reject(error);
     }
   );
-  axiosClient.interceptors.request.use(
-    (config) => {
-      const csrfToken = localStorage.getItem("csrfToken");
-      if (csrfToken) {
-        config.headers["x-csrf-token"] = csrfToken;
-      }
-      return config;
+  axiosClient.interceptors.request.use((config) => {
+    const csrfToken = localStorage.getItem("csrfToken");
+    if (csrfToken) {
+      config.headers["x-csrf-token"] = csrfToken;
     }
-  );
+    return config;
+  });
 
   return axiosClient;
 };

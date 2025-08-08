@@ -110,6 +110,8 @@ class AuthService {
           meta: { ts: Date.now() },
         }),
       }).catch(() => {});
+      window.location.href = "/";
+      await this.api.post("/auth/logout");
       console.error("Error getting user:", error);
       const errorMessage =
         (error as AxiosError<{ detail?: string; error?: string }>).response
