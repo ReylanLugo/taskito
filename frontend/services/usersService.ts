@@ -40,9 +40,29 @@ export class UsersService {
           "no-cache": "true",
         },
       });
+      void fetch("/internal/log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          level: "info",
+          message: "Users fetched",
+          labels: { channel: "users" },
+          meta: { ts: Date.now() },
+        }),
+      }).catch(() => {});
       this.setUsersState(setUsers(response.data.users));
       return response.status;
     } catch (error) {
+      void fetch("/internal/log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          level: "error",
+          message: "Users fetching failed",
+          labels: { channel: "users" },
+          meta: { ts: Date.now() },
+        }),
+      }).catch(() => {});
       console.error("Error fetching users:", error);
       throw error;
     }
@@ -63,8 +83,28 @@ export class UsersService {
           "no-cache": "true",
         },
       });
+      void fetch("/internal/log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          level: "info",
+          message: "Users tasks fetched",
+          labels: { channel: "users" },
+          meta: { ts: Date.now() },
+        }),
+      }).catch(() => {});
       return response.data;
     } catch (error) {
+      void fetch("/internal/log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          level: "error",
+          message: "Users tasks fetching failed",
+          labels: { channel: "users" },
+          meta: { ts: Date.now() },
+        }),
+      }).catch(() => {});
       console.error("Error fetching users:", error);
       throw error;
     }
@@ -87,8 +127,28 @@ export class UsersService {
         },
       });
       this.setUsersState(deleteUser(id));
+      void fetch("/internal/log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          level: "info",
+          message: "User deleted",
+          labels: { channel: "users" },
+          meta: { ts: Date.now() },
+        }),
+      }).catch(() => {});
       return response.status;
     } catch (error) {
+      void fetch("/internal/log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          level: "error",
+          message: "User deletion failed",
+          labels: { channel: "users" },
+          meta: { ts: Date.now() },
+        }),
+      }).catch(() => {});
       console.error("Error deleting user:", error);
       throw error;
     }
@@ -112,8 +172,28 @@ export class UsersService {
         },
       });
       this.setUsersState(updateUser(response.data));
+      void fetch("/internal/log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          level: "info",
+          message: "User updated",
+          labels: { channel: "users" },
+          meta: { ts: Date.now() },
+        }),
+      }).catch(() => {});
       return response.status;
     } catch (error) {
+      void fetch("/internal/log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          level: "error",
+          message: "User updating failed",
+          labels: { channel: "users" },
+          meta: { ts: Date.now() },
+        }),
+      }).catch(() => {});
       console.error("Error updating user:", error);
       throw error;
     }

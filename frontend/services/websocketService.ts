@@ -80,6 +80,16 @@ class WebSocketService {
       // Start heartbeat
       this.startHeartbeat(channel);
       // initial hello
+      void fetch("/internal/log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          level: "info",
+          message: "WebSocket connected",
+          labels: { channel },
+          meta: { ts: Date.now() },
+        }),
+      }).catch(() => {});
       try {
         socket.send(JSON.stringify({ type: "client", event: "hello", data: { ts: Date.now() } }));
       } catch {
@@ -175,6 +185,17 @@ class WebSocketService {
         return;
       }
 
+      void fetch("/internal/log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          level: "info",
+          message: "WebSocket message received",
+          labels: { channel: _channel },
+          meta: { ts: Date.now() },
+        }),
+      }).catch(() => {});
+
       if (msg.type === "task") {
         if (msg.event === "created") {
           console.log("created", msg.data);
@@ -202,6 +223,16 @@ class WebSocketService {
         }
       }
     } catch (e) {
+      void fetch("/internal/log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          level: "error",
+          message: "WebSocket message parse error",
+          labels: { channel: _channel },
+          meta: { ts: Date.now() },
+        }),
+      }).catch(() => {});
       // Ignore malformed messages
       console.warn("WS message parse error", e);
     }
