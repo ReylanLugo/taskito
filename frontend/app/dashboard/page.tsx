@@ -84,12 +84,7 @@ export default function Dashboard() {
 
     // Fetch auth user if not exists
     if (!auth?.id) {
-      authService.getUser().catch((err) => {
-        console.log(err);
-        const errorMessage = (err as AxiosError<{ detail?: string }>).response
-          ?.data?.detail;
-        toast.error(errorMessage || "Failed to fetch auth user");
-      });
+      authService.getUser()
     }
   }, []);
 

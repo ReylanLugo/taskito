@@ -1,0 +1,46 @@
+{
+  "tasks": [
+    {
+      "id": 4,
+      "title": "Research new libraries",
+      "description": "Look into alternatives for current dependencies",
+      "completed": true,
+      "priority": "media",
+      "due_date": "2025-07-30T00:00:00Z",
+      "created_by": 1,
+      "assigned_to": 1,
+      "comments": [],
+      "created_at": "2025-07-30T00:00:00Z",
+      "updated_at": "2025-07-30T00:00:00Z"
+    },
+    {
+      "id": 5,
+      "title": "Fix critical security issue",
+      "description": "Address the authentication vulnerability",
+      "completed": false,
+      "priority": "alta",
+      "due_date": "2025-08-10T00:00:00Z",
+      "created_by": 1,
+      "assigned_to": 1,
+      "comments": [],
+      "created_at": "2025-08-02T00:00:00Z",
+      "updated_at": "2025-08-02T00:00:00Z"
+    },
+    {
+      "id": 6,
+      "title": "Review pull requests",
+      "description": "Check pending PRs from the team",
+      "completed": false,
+      "priority": "baja",
+      "due_date": "2025-08-20T00:00:00Z",
+      "created_by": 1,
+      "assigned_to": 1,
+      "comments": [],
+      "created_at": "2025-08-04T00:00:00Z",
+      "updated_at": "2025-08-04T00:00:00Z"
+    }
+  ],
+  "page": 2,
+  "size": 3,
+  "pages": 2
+}

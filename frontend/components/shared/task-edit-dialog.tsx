@@ -74,15 +74,19 @@ export default function TaskEditDialog({ task }: { task: Task }) {
     }
   };
 
-  const handleClose = () => {
-    setIsDialogOpen(false);
-    form.reset();
+  const handleOpenChange = (open: boolean) => {
+    setIsDialogOpen(open);
+    if (!open) {
+      form.reset();
+    }
   };
 
   return (
-    <Dialog open={isDialogOpen} onOpenChange={handleClose}>
+    <Dialog open={isDialogOpen} onOpenChange={handleOpenChange}>
       <DialogTrigger>
-        <Edit className="h-4 w-4" />
+        <Button variant="ghost" size="icon" data-testid="task-edit-button">
+          <Edit className="h-4 w-4" />
+        </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
@@ -102,6 +106,7 @@ export default function TaskEditDialog({ task }: { task: Task }) {
                   <FormLabel htmlFor="title">Title</FormLabel>
                   <FormControl>
                     <Input
+                      data-testid="title-input"
                       id="title"
                       placeholder="Title"
                       type="text"
@@ -120,6 +125,7 @@ export default function TaskEditDialog({ task }: { task: Task }) {
                   <FormLabel htmlFor="description">Description</FormLabel>
                   <FormControl>
                     <Textarea
+                      data-testid="description-input"
                       id="description"
                       placeholder="Description"
                       {...field}
@@ -141,6 +147,7 @@ export default function TaskEditDialog({ task }: { task: Task }) {
                     <FormLabel htmlFor="due_date">Due Date</FormLabel>
                     <FormControl>
                       <DatePicker
+                        data-testid="due-date-input"
                         id="due_date"
                         {...field}
                         value={
@@ -168,7 +175,7 @@ export default function TaskEditDialog({ task }: { task: Task }) {
                         value={field.value}
                         onValueChange={field.onChange}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger data-testid="priority-select">
                           <SelectValue placeholder="Select a priority" />
                         </SelectTrigger>
                         <SelectContent>
@@ -191,6 +198,7 @@ export default function TaskEditDialog({ task }: { task: Task }) {
                   <FormLabel htmlFor="assigned_to">Assigned To</FormLabel>
                   <FormControl>
                     <Combobox
+                      data-testid="assigned-to-combobox"
                       options={
                         usersState.users?.map((user) => ({
                           value: user.id.toString(),

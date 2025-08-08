@@ -21,9 +21,9 @@ export const TaskCard = ({
   deleteTask: (taskId: number) => void;
 }) => {
   return (
-    <Card className="gap-0">
+    <Card data-testid="task-card" className="gap-0">
       <CardHeader>
-        <CardTitle className="flex justify-between">
+        <CardTitle data-testid="task-title" className="flex justify-between">
           <div className="flex items-center gap-2">
             <span className="text-base font-bold line-clamp-2 truncate max-w-[250px]">
               {task.title}
@@ -32,10 +32,11 @@ export const TaskCard = ({
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-400">
+            <span data-testid="task-due-date" className="text-sm text-gray-400">
               {task.due_date && new Date(task.due_date).toLocaleDateString()}
             </span>
             <Button
+              data-testid="delete-task"
               className="cursor-pointer"
               variant="ghost"
               onClick={() => deleteTask(task.id)}
@@ -46,17 +47,21 @@ export const TaskCard = ({
         </CardTitle>
       </CardHeader>
       <CardContent className="h-32">
-        <p className="max-h-24 text-left text-ellipsis overflow-hidden text-gray-600 text-sm">
+        <p
+          data-testid="task-description"
+          className="max-h-24 text-left text-ellipsis overflow-hidden text-gray-600 text-sm"
+        >
           {task.description}
         </p>
       </CardContent>
       <CardFooter>
         {task.completed ? (
-          <Button className="text-sm w-full py-6" variant="success">
+          <Button data-testid="completed-indicator" className="text-sm w-full py-6" variant="success">
             Completed <CheckCircle className="h-4 w-4" />
           </Button>
         ) : (
           <Button
+            data-testid="mark-task-as-completed"
             className="text-sm w-full py-6 text-gray-600"
             variant="outline"
             onClick={() => markTaskAsCompleted(task.id)}

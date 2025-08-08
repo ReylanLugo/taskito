@@ -1,25 +1,26 @@
-'use client';
+"use client";
+import Image from "next/image";
 
-import { useEffect } from 'react';
+type ErrorProps = {
+  onRetry?: () => void;
+};
 
-export default function Error({
-  error,
-  reset,
-}: {
-  error: Error & { digest?: string };
-  reset: () => void;
-}) {
-  useEffect(() => {
-    console.error(error);
-    // Check if the error is a ChunkLoadError
-  }, [error]);
+export default function Error({ onRetry }: ErrorProps) {
+  const handleRetry = () => {
+    if (onRetry) return onRetry();
+    // Default behavior for production usage
+    window.location.reload();
+  };
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
-      <h2 className="text-2xl font-bold text-red-600 mb-4">Something went wrong!</h2>
+      <Image src="/logo.png" alt="Error" width={200} height={200} />
+      <h2 className="text-2xl font-bold text-slate-800 my-4">
+        Something went wrong!
+      </h2>
       <button
-        className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-700"
-        onClick={() => reset()}
+        className="px-4 py-2 bg-slate-500 text-black rounded hover:bg-slate-700"
+        onClick={handleRetry}
       >
         Try again
       </button>
