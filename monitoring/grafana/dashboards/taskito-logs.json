@@ -29,7 +29,7 @@
       },
       "gridPos": {
         "h": 15,
-        "w": 24,
+        "w": 12,
         "x": 0,
         "y": 0
       },
@@ -90,6 +90,42 @@
         }
       ],
       "title": "All Container Logs",
+      "type": "logs"
+    }
+    ,
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "gridPos": {
+        "h": 15,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "id": 3,
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "prettifyLogMessage": false,
+        "showCommonLabels": false,
+        "showLabels": true,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": false
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "expr": "{application=\"taskito-frontend\"}",
+          "refId": "A"
+        }
+      ],
+      "title": "Frontend Application Logs",
       "type": "logs"
     }
   ],

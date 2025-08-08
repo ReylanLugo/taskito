@@ -14,14 +14,14 @@ import { TaskDialog } from "@/components/admin/task-dialog";
 import { Role, User, UserWithStats } from "@/types/User";
 import { Task } from "@/types/Tasks";
 import UsersService from "@/services/usersService";
-import dynamic from "next/dynamic";
+import dynamicImport from "next/dynamic";
 import { AxiosError } from "axios";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-const UsersTable = dynamic(() => import("@/components/admin/users-table"), {
+const UsersTable = dynamicImport(() => import("@/components/admin/users-table"), {
   ssr: false,
   loading: () => <div className="w-full h-96 animate-pulse bg-slate-100"></div>,
 });

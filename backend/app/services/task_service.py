@@ -1,4 +1,5 @@
 import logging
+import asyncio
 from typing import List, Optional, Tuple
 from datetime import datetime
 from fastapi import status
@@ -9,8 +10,11 @@ from sqlalchemy import and_, or_, desc, asc
 from ..models.task import Task, Comment, TaskPriority
 from ..models.user import User
 from ..schemas.task import (
-    TaskCreate, TaskUpdate, TaskFilter, TaskStatistics, CommentCreate
+    TaskCreate, TaskUpdate, TaskFilter, TaskStatistics, CommentCreate,
+    Task as TaskSchema,
+    Comment as CommentSchema,
 )
+from app.services.websocket_service import manager
 
 
 class TaskService:
@@ -29,6 +33,16 @@ class TaskService:
             db: SQLAlchemy database session
         """
         self.db = db
+
+    def _fire_and_forget(self, coro) -> None:
+        """Schedule an async coroutine without awaiting it.
+        Used to emit WebSocket notifications after DB commits without blocking.
+        """
+        try:
+            asyncio.create_task(coro)
+        except Exception as e:
+            # Log but never interrupt the main request flow
+            logging.error(f"Failed to schedule websocket notification: {e}")
 
     def get_task_by_id(self, task_id: int) -> Optional[Task]:
         """
@@ -132,6 +146,12 @@ class TaskService:
             self.db.refresh(db_task)
 
             logging.info(f"Task created (id={db_task.id}, by user={user_id})")
+            # Fire WS event (non-blocking)
+            try:
+                task_payload = TaskSchema.model_validate(db_task).model_dump()
+                self._fire_and_forget(manager.notify_task_created(task_payload, meta={"actor_id": user_id}))
+            except Exception as ws_err:
+                logging.error(f"Failed to enqueue WS create event for task {db_task.id}: {ws_err}")
             return db_task
         except Exception as e:
             logging.error(f"Error creating task: {e}")
@@ -163,9 +183,14 @@ class TaskService:
             self.db.refresh(db_task)
             
             logging.info(f"Task updated (id={task_id}, by user={user_id})")
+            # Fire WS event (non-blocking)
+            try:
+                task_payload = TaskSchema.model_validate(db_task).model_dump(mode="json")
+                self._fire_and_forget(manager.notify_task_updated(task_payload, meta={"actor_id": user_id}))
+            except Exception as ws_err:
+                logging.error(f"Failed to enqueue WS update event for task {task_id}: {ws_err}")
             return db_task
         except HTTPException:
-            # Let FastAPI handle HTTPExceptions (like 404)
             raise
         except Exception as e:
             logging.error(f"Error updating task {task_id}: {e}")
@@ -191,6 +216,11 @@ class TaskService:
             self.db.commit()
             
             logging.info(f"Task deleted (id={task_id}) by user {user_id}")
+            # Fire WS event (non-blocking)
+            try:
+                self._fire_and_forget(manager.notify_task_deleted(task_id, meta={"actor_id": user_id}))
+            except Exception as ws_err:
+                logging.error(f"Failed to enqueue WS delete event for task {task_id}: {ws_err}")
             return True
         except HTTPException:
             # Let FastAPI handle HTTPExceptions (like 404)
@@ -269,6 +299,16 @@ class TaskService:
             self.db.refresh(db_comment)
             
             logging.info(f"Comment added to task {task_id} by user {user_id}")
+            try:
+                comment_payload = CommentSchema.model_validate(db_comment).model_dump()
+                self._fire_and_forget(
+                    manager.broadcast_json(
+                        channel="tasks",
+                        payload={"type": "comment", "event": "created", "data": comment_payload, "meta": {"actor_id": user_id}},
+                    )
+                )
+            except Exception as ws_err:
+                logging.error(f"Failed to enqueue WS comment event for task {task_id}: {ws_err}")
             return db_comment
         except Exception as e:
             logging.error(f"Error adding comment to task {task_id}: {e}")

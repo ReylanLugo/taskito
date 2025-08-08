@@ -100,8 +100,10 @@ services:
       - NODE_TLS_REJECT_UNAUTHORIZED=0  # Allow self-signed certificates in development
     depends_on:
       - api
+      - loki
     networks:
       - taskito-network
+      - loki
 
 volumes:
   postgres-data:

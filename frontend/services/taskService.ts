@@ -81,8 +81,28 @@ class TaskService {
           "no-cache": "true",
         },
       });
+      void fetch("/internal/log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          level: "info",
+          message: "Tasks fetched",
+          labels: { channel: "tasks" },
+          meta: { ts: Date.now() },
+        }),
+      }).catch(() => {});
       return response.data;
     } catch (error) {
+      void fetch("/internal/log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          level: "error",
+          message: "Tasks fetching failed",
+          labels: { channel: "tasks" },
+          meta: { ts: Date.now() },
+        }),
+      }).catch(() => {});
       console.error("Error fetching tasks:", error);
       throw error;
     }
@@ -110,8 +130,28 @@ class TaskService {
           "no-cache": "true",
         },
       });
+      void fetch("/internal/log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          level: "info",
+          message: "Tasks statistics fetched",
+          labels: { channel: "tasks" },
+          meta: { ts: Date.now() },
+        }),
+      }).catch(() => {});
       this.setTaskState(setStatistics(response.data));
     } catch (error) {
+      void fetch("/internal/log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          level: "error",
+          message: "Tasks statistics fetching failed",
+          labels: { channel: "tasks" },
+          meta: { ts: Date.now() },
+        }),
+      }).catch(() => {});
       console.error("Error fetching tasks statistics:", error);
       throw error;
     }
@@ -133,9 +173,29 @@ class TaskService {
           "x-csrf-token": this.csrfToken,
         },
       });
+      void fetch("/internal/log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          level: "info",
+          message: "Task created",
+          labels: { channel: "tasks" },
+          meta: { ts: Date.now() },
+        }),
+      }).catch(() => {});
       this.setTaskState(addTask(response.data));
       return response.status;
     } catch (error) {
+      void fetch("/internal/log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          level: "error",
+          message: "Task creation failed",
+          labels: { channel: "tasks" },
+          meta: { ts: Date.now() },
+        }),
+      }).catch(() => {});
       console.error("Error creating task:", error);
       throw error;
     }
@@ -158,10 +218,29 @@ class TaskService {
           "x-csrf-token": this.csrfToken,
         },
       });
-      console.log(response.data, "updated");
+      void fetch("/internal/log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          level: "info",
+          message: "Task updated",
+          labels: { channel: "tasks" },
+          meta: { ts: Date.now() },
+        }),
+      }).catch(() => {});
       this.setTaskState(updateTask(response.data));
       return response.status;
     } catch (error) {
+      void fetch("/internal/log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          level: "error",
+          message: "Task updating failed",
+          labels: { channel: "tasks" },
+          meta: { ts: Date.now() },
+        }),
+      }).catch(() => {});
       console.error("Error updating task:", error);
       throw error;
     }
@@ -189,9 +268,29 @@ class TaskService {
           },
         }
       );
+      void fetch("/internal/log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          level: "info",
+          message: "Task marked as completed",
+          labels: { channel: "tasks" },
+          meta: { ts: Date.now() },
+        }),
+      }).catch(() => {});
       this.setTaskState(markTaskAsCompleted(taskId));
       return response.status;
     } catch (error) {
+      void fetch("/internal/log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          level: "error",
+          message: "Task marking as completed failed",
+          labels: { channel: "tasks" },
+          meta: { ts: Date.now() },
+        }),
+      }).catch(() => {});
       console.error("Error marking task as completed:", error);
       throw error;
     }
@@ -213,9 +312,29 @@ class TaskService {
           "x-csrf-token": this.csrfToken,
         },
       });
+      void fetch("/internal/log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          level: "info",
+          message: "Task deleted",
+          labels: { channel: "tasks" },
+          meta: { ts: Date.now() },
+        }),
+      }).catch(() => {});
       this.setTaskState(deleteTask(taskId));
       return response.status;
     } catch (error) {
+      void fetch("/internal/log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          level: "error",
+          message: "Task deletion failed",
+          labels: { channel: "tasks" },
+          meta: { ts: Date.now() },
+        }),
+      }).catch(() => {});
       console.error("Error deleting task:", error);
       throw error;
     }
@@ -244,9 +363,29 @@ class TaskService {
           },
         }
       );
+      void fetch("/internal/log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          level: "info",
+          message: "Comment added to task",
+          labels: { channel: "tasks" },
+          meta: { ts: Date.now() },
+        }),
+      }).catch(() => {});
       this.setTaskState(addCommentAction({ taskId, comment: response.data }));
       return response.status;
     } catch (error) {
+      void fetch("/internal/log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          level: "error",
+          message: "Comment adding failed",
+          labels: { channel: "tasks" },
+          meta: { ts: Date.now() },
+        }),
+      }).catch(() => {});
       console.error("Error adding comment:", error);
       throw error;
     }

@@ -44,8 +44,28 @@ class AuthService {
         const user = await this.api.get("/auth/me");
         this.setAuthStore(setUser(user.data.user));
       }
+      void fetch("/internal/log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          level: "info",
+          message: "User logged in",
+          labels: { channel: "auth" },
+          meta: { ts: Date.now() },
+        }),
+      }).catch(() => {});
       return response.data;
     } catch (error) {
+      void fetch("/internal/log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          level: "error",
+          message: "User login failed",
+          labels: { channel: "auth" },
+          meta: { ts: Date.now() },
+        }),
+      }).catch(() => {});
       console.error("Error logging in:", error);
       const errorMessage =
         (error as AxiosError<{ detail?: string; error?: string }>).response
@@ -68,8 +88,28 @@ class AuthService {
     try {
       const response = await this.api.get("/auth/me");
       this.setAuthStore(setUser(response.data.user));
+      void fetch("/internal/log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          level: "info",
+          message: "User getting",
+          labels: { channel: "auth" },
+          meta: { ts: Date.now() },
+        }),
+      }).catch(() => {});
       return response.data.user;
     } catch (error) {
+      void fetch("/internal/log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          level: "error",
+          message: "User getting failed",
+          labels: { channel: "auth" },
+          meta: { ts: Date.now() },
+        }),
+      }).catch(() => {});
       console.error("Error getting user:", error);
       const errorMessage =
         (error as AxiosError<{ detail?: string; error?: string }>).response
@@ -105,8 +145,28 @@ class AuthService {
       });
       // 3. Get the user
       await this.getUser();
+      void fetch("/internal/log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          level: "info",
+          message: "User registered",
+          labels: { channel: "auth" },
+          meta: { ts: Date.now() },
+        }),
+      }).catch(() => {});
       return response.status;
     } catch (error) {
+      void fetch("/internal/log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          level: "error",
+          message: "User registration failed",
+          labels: { channel: "auth" },
+          meta: { ts: Date.now() },
+        }),
+      }).catch(() => {});
       console.error("Error registering user:", error);
       const errorMessage =
         (error as AxiosError<{ detail?: string; error?: string }>).response
@@ -134,6 +194,16 @@ class AuthService {
    */
   async logout() {
     try {
+      void fetch("/internal/log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          level: "info",
+          message: "User logged out",
+          labels: { channel: "auth" },
+          meta: { ts: Date.now() },
+        }),
+      }).catch(() => {});
       // Mark logout in progress for interceptors (short TTL handled there)
       try {
         sessionStorage.setItem("logoutInProgressAt", String(Date.now()));
@@ -166,6 +236,16 @@ class AuthService {
         window.location.replace("/");
       }
     } catch (error) {
+      void fetch("/internal/log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          level: "error",
+          message: "User logout failed",
+          labels: { channel: "auth" },
+          meta: { ts: Date.now() },
+        }),
+      }).catch(() => {});
       console.error("Error logging out:", error);
       const errorMessage =
         (error as AxiosError<{ detail?: string; error?: string }>).response

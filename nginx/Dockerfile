@@ -33,6 +33,9 @@ RUN echo "    # Ensure all request headers are passed" >> /etc/nginx/nginx.conf
 RUN echo "    proxy_pass_request_headers on;" >> /etc/nginx/nginx.conf
 RUN echo "    location /api/ {" >> /etc/nginx/nginx.conf
 RUN echo "      proxy_pass http://api:8000/;" >> /etc/nginx/nginx.conf
+RUN echo "      proxy_http_version 1.1;" >> /etc/nginx/nginx.conf
+RUN echo "      proxy_set_header Upgrade \$http_upgrade;" >> /etc/nginx/nginx.conf
+RUN echo "      proxy_set_header Connection \"upgrade\";" >> /etc/nginx/nginx.conf
 RUN echo "      proxy_set_header Host \$host;" >> /etc/nginx/nginx.conf
 RUN echo "      proxy_set_header X-Real-IP \$remote_addr;" >> /etc/nginx/nginx.conf
 RUN echo "      proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;" >> /etc/nginx/nginx.conf
