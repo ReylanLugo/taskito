@@ -106,6 +106,8 @@ Notas:
 Desde la raíz del proyecto:
 ```powershell
 docker compose up -d --build
+Si algo sale mal para un hard reset y limpieza de todos los contenedores:
+docker compose down -v --rmi all --remove-orphans; docker compose build --no-cache; docker compose up -d
 ```
 
 Servicios que se levantarán (según `docker-compose.yml`):

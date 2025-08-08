@@ -34,6 +34,7 @@ export default function TaskDetails({
 
   const addCommentEvent = (e: React.FormEvent<HTMLButtonElement>) => {
     e.preventDefault();
+    if (comment.trim() === "") return;
     addComment(task.id, comment);
     setComment("");
   };
