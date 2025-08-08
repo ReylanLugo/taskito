@@ -133,7 +133,7 @@ http://localhost:3000/d/taskito-logs/taskito-logs?orgId=1&from=now-1h&to=now&tim
 
 - Probar en el navegador:
   - Frontend: https://localhost/
-  - API root: https://localhost/api/docs 
+  - API root: https://localhost/api/docs (Login primero en https://localhost para obtener la cookie)
   (Debido a las politicas CSP con cada actualizacion se debe actualizar el hash en el middleware para permitir la insertacion de js en el dom por parte de swagger)
 
 Si el navegador advierte por certificado, acepta la excepción (SSL autofirmado de desarrollo).
