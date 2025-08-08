@@ -26,8 +26,6 @@ services:
     environment:
       - POSTGRES_HOST=postgres
       - REDIS_HOST=redis
-    working_dir: /app
-    command: ["sh", "-c", "./startup.sh"]
 
     depends_on:
       - postgres
